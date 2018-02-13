@@ -1,0 +1,8 @@
+models/*
+results/*
+training.log
+**/*.pyc
+data
+**/*.png
+**/*.JPG
+**/*.zip
