@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from skimage.measure import regionprops
 import skimage
+import skimage.io
 import skimage.morphology
 import skimage.transform
 import torch
@@ -43,9 +44,9 @@ model = SemanticSegmentation().cuda()
 model.load_state_dict(torch.load(Path('models') / 'epoch_3200'))
 model.eval()
 
-input_folder = Path().absolute().parent / 'LouseDigitisation_LowResBackup' / 'LouseDigitisation_LowResBackup_SLR_A'
+input_folder = Path().absolute().parent / 'LouseDigitisation_LowResBackup'
 
-for filename in islice((input_folder / '2017_05_31' / 'images').iterdir(), 10):
+for filename in input_folder.glob('**/*.JPG'):
     original_image = Image.open(filename)
     image, original_size, padding = downsample_pad(original_image)
 
@@ -65,4 +66,5 @@ for filename in islice((input_folder / '2017_05_31' / 'images').iterdir(), 10):
 
     shutil.copy(filename, output_folder / filename.parts[-1])
     for i, (segment, class_name) in enumerate(segments):
-        plt.imsave(str(output_folder / f'{i}_{class_name}.png'), segment)
+        segment = Image.fromarray(segment)
+        segment.save(output_folder / f'{i}_{class_name}.jpg')

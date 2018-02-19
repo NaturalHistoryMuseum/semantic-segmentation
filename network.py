@@ -85,7 +85,7 @@ class SemanticSegmentation(nn.Module):
 
         self.conv3 = nn.Conv2d(8, 5, kernel_size=1)
 
-    def forward(self, x):
+    def embedding(self, x):
         x, skip1 = self.down1(x)
         x, skip2 = self.down2(x)
         x, skip3 = self.down3(x)
@@ -104,7 +104,10 @@ class SemanticSegmentation(nn.Module):
         x = self.up2(x, skip2)
         x = self.up1(x, skip1)
 
-        return self.conv3(x)
+        return x
+
+    def forward(self, x):
+        return self.conv3(self.embedding(x))
 
 
 def visualise_segmentation(output, image, predicted_class, colours, n=5, dpi=250):
