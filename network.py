@@ -62,9 +62,9 @@ class UpsampleBlock(nn.Module):
         return self.bn2(self.relu(x))
 
 
-class SemanticSegmentation(nn.Module):
+class DenseEmbedding(nn.Module):
     def __init__(self):
-        super(SemanticSegmentation, self).__init__()
+        super(DenseEmbedding, self).__init__()
 
         self.down1 = DownsampleBlock(3, 16)
         self.down2 = DownsampleBlock(16, 32)
@@ -83,9 +83,10 @@ class SemanticSegmentation(nn.Module):
         self.up2 = UpsampleBlock(64, 16)
         self.up1 = UpsampleBlock(32, 8)
 
-        self.conv3 = nn.Conv2d(8, 5, kernel_size=1)
+        self.conv_class = nn.Conv2d(8, 5, kernel_size=1)
+        self.conv_instance = nn.Conv2d(8, 2, kernel_size=1)
 
-    def embedding(self, x):
+    def forward(self, x):
         x, skip1 = self.down1(x)
         x, skip2 = self.down2(x)
         x, skip3 = self.down3(x)
@@ -106,8 +107,17 @@ class SemanticSegmentation(nn.Module):
 
         return x
 
+
+class SemanticInstanceSegmentation(nn.Module):
+    def __init__(self):
+        super(SemanticInstanceSegmentation, self).__init__()
+        self.embedding = DenseEmbedding()
+        self.conv_semantic = nn.Conv2d(8, 5, kernel_size=1)
+        self.conv_instance = nn.Conv2d(8, 2, kernel_size=1)
+
     def forward(self, x):
-        return self.conv3(self.embedding(x))
+        embedding = self.embedding(x)
+        return self.conv_semantic(embedding), self.conv_instance(embedding)
 
 
 def visualise_segmentation(output, image, predicted_class, colours, n=5, dpi=250):
@@ -148,7 +158,7 @@ def train(model, train_loader, test_loader):
             image, target = Variable(image).cuda(), Variable(target).cuda()
             optimizer.zero_grad()
 
-            logits = model(image)
+            logits, _ = model(image)
             logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
             loss = cross_entropy(logits_per_pixel.view(-1, 5), target.view(-1))
 
@@ -171,7 +181,7 @@ def train(model, train_loader, test_loader):
             for image, target in islice(test_loader, 2):
                 image, target = Variable(image).cuda(), Variable(target).cuda()
 
-                logits = model(image)
+                logits, _ = model(image)
                 logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
                 loss = cross_entropy(logits_per_pixel.view(-1, 5), target.view(-1))
                 total_loss += loss.data[0]
@@ -194,7 +204,7 @@ def train(model, train_loader, test_loader):
 
 
 if __name__ == '__main__':
-    model = SemanticSegmentation().cuda()
+    model = SemanticInstanceSegmentation().cuda()
 
     transform = transforms.Compose([
         transforms.RandomRotation(5),
@@ -211,10 +221,11 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Lambda(lambda x: (x * 255).long())])
 
+    # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
     data = Slides(download=True, train=True, root='data', transform=transform, target_transform=target_transform)
-    train_loader = torch.utils.data.DataLoader(data, batch_size=5, drop_last=True, shuffle=True)  # don't use multiple workers! Doesn't work with setting random seed
+    train_loader = torch.utils.data.DataLoader(data, batch_size=5, drop_last=True, shuffle=True)
     data = Slides(download=True, train=False, root='data', transform=transform, target_transform=target_transform)
-    test_loader = torch.utils.data.DataLoader(data, batch_size=5, drop_last=True, shuffle=True)  # don't use multiple workers! Doesn't work with setting random seed
+    test_loader = torch.utils.data.DataLoader(data, batch_size=5, drop_last=True, shuffle=True)
 
     # train(model, train_loader, test_loader)
     model.load_state_dict(torch.load('models/epoch_3200'))
@@ -225,7 +236,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         for i in range(5):
             image = images[(i * 2):((i + 1) * 2)].cuda()
-            logits = model(image)
+            logits, _ = model(image)
             predicted_class = F.pad(logits.data.max(1, keepdim=True)[1], (-112, -112, -91, -91))
             image = F.pad(image, (-112, -112, -91, -91))
             visualise_segmentation(Path() / f'full_{i}.png', image, predicted_class, colours=data.colours, n=2, dpi=750)
@@ -234,7 +245,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         for i in range(1):
             image = images[(i * 7):((i + 1) * 7)].cuda()
-            logits = model(image)
+            logits, _ = model(image)
             predicted_class = F.pad(logits.data.max(1, keepdim=True)[1], (-112, -112, -91, -91))
             image = F.pad(image, (-112, -112, -91, -91))
             visualise_segmentation(Path() / f'test_{i}.png', image, predicted_class, colours=data.colours, n=7, dpi=750)
