@@ -80,6 +80,7 @@ class SemanticSegmentationDataset(data.Dataset):
         for i, image in enumerate(images):
             if i < self.train_size:
                 train_set[i] = np.asarray(image) / 255
+                test_set[i] = np.asarray(image) / 255  # hack!!
             else:
                 test_set[i - self.train_size] = np.asarray(image) / 255
 
@@ -218,14 +219,58 @@ class Slides(SemanticSegmentationDataset):
 
             if i < self.train_size:
                 train_set[i] = key[index]
+                test_set[i] = key[index]  # hack!!
             else:
                 test_set[i - self.train_size] = key[index]
+
+    def process_instance_image_files(self, folder_path, f_train, f_test):
+        train_set = f_train.create_dataset('instances', (self.train_size, self.height, self.width), dtype=np.int64)
+        test_set = f_test.create_dataset('instances', (self.test_size, self.height, self.width), dtype=np.int64)
+        images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
+
+        for i, image in enumerate(images):
+            image = np.asarray(image)
+            image_colors = image.reshape(-1, 3)
+            colors, indices = np.unique(image_colors, axis=0, return_inverse=True)
+
+            if i < self.train_size:
+                train_set[i] = indices.reshape(image.shape[:2])
+                test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
+            else:
+                test_set[i - self.train_size] = indices.reshape(image.shape[:2])
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is index of the target class.
+        """
+        with h5py.File(self.datafile, 'r') as f:
+            img = f['images'][index]
+            labels = f['labels'][index]
+            instances = f['instances'][index]
+
+        # doing this so that it is consistent with all other datasets to return a PIL Image
+        img = Image.fromarray((img * 255).astype(np.uint8), mode='RGB')
+        labels = Image.fromarray(labels.astype(np.uint8), mode='L')
+        instances = Image.fromarray(instances.astype(np.uint8), mode='L')
+
+        seed = np.random.randint(2147483647)
+        random.seed(seed)
+        img = self.transform(img)
+        random.seed(seed)
+        labels = self.target_transform(labels)
+        random.seed(seed)
+        instances = self.target_transform(instances)
+
+        return img, labels, instances
 
     def download(self):
         self.raw_folder.mkdir(exist_ok=True, parents=True)
         self.processed_folder.mkdir(exist_ok=True, parents=True)
 
-        folder = Path().absolute().parent / 'TrainingSlides'
+        folder = Path().absolute().parent / 'TrainingSlidesInstances'
 
         print(f'Copying images')
 
@@ -237,7 +282,15 @@ class Slides(SemanticSegmentationDataset):
 
         (self.raw_folder / 'labels').mkdir(exist_ok=True)
         for filename in sorted(folder.glob('*.png')):
-            shutil.copy(filename, self.raw_folder / 'labels' / filename.parts[-1])
+            if 'label' in str(filename):
+                shutil.copy(filename, self.raw_folder / 'labels' / filename.parts[-1])
+
+        print(f'Copying labels')
+
+        (self.raw_folder / 'instances').mkdir(exist_ok=True)
+        for filename in sorted(folder.glob('*.png')):
+            if 'instance' in str(filename):
+                shutil.copy(filename, self.raw_folder / 'instances' / filename.parts[-1])
 
         print(f'Copying class file')
 
@@ -251,5 +304,6 @@ class Slides(SemanticSegmentationDataset):
         with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:
             self.process_raw_image_files(self.raw_folder / 'images', f_train, f_test, extension='*.JPG')
             self.process_label_image_files(self.raw_folder / 'labels', self.colours, f_train, f_test)
+            self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
 
         print('Done!')

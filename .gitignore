@@ -2,6 +2,7 @@ models/*
 results/*
 training.log
 **/*.pyc
+**/*.npy
 data
 **/*.png
 **/*.JPG

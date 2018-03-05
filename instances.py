@@ -50,10 +50,11 @@ class SemanticLabels:
         self.embeddings = embeddings
         self.labels = labels
         self.instances = instances
+        self.dimensions = embeddings.shape[1]
 
     def __getitem__(self, index):
         mask = self.labels.view(-1) == index
-        embeddings = self.embeddings.view(1, 2, -1)[..., mask]
+        embeddings = self.embeddings.view(1, self.dimensions, -1)[..., mask]
         target_instances = self.instances.view(-1)[mask]
         return embeddings, Clustering(embeddings, target_instances)
 
@@ -102,30 +103,35 @@ def mean_shift(label_embedding):
     predicted_instances = -np.ones(label_embedding.shape[1])
     unlabeled = np.where(predicted_instances < 0)[0]
 
+    dimensions = label_embedding.shape[0]
+
     while unlabeled.size > 0:
         index = np.random.choice(unlabeled)
         indices = set([index])
         centre = label_embedding.T[index]
 
         for i in range(100):
-            neighbors = neigh.radius_neighbors(centre.reshape(1, 2), return_distance=False)[0]
+            neighbors = neigh.radius_neighbors(centre.reshape(1, dimensions), return_distance=False)[0]
             new_centre = label_embedding.T[neighbors].mean(axis=0)
             if np.allclose(centre, new_centre):
                 break
             indices.update(neighbors)
             centre = new_centre
 
-        neighbors = neigh.radius_neighbors(centre.reshape(1, 2), return_distance=False)[0]
+        neighbors = neigh.radius_neighbors(centre.reshape(1, dimensions), return_distance=False)[0]
         indices.update(neighbors)
 
-        centre_index = neigh.nearest(centre.reshape(1, 2))
+        centre_index = neigh.nearest(centre.reshape(1, dimensions))
         predicted_instances[list(indices)] = centre_index
         unlabeled = np.where(predicted_instances < 0)[0]
 
     return predicted_instances
 
 
-def visualise_embeddings(label_embedding, predicted_instances):
+def visualise_embeddings(label_embedding, predicted_instances, target_instances=None):
+    if target_instances is not None:
+        plt.subplot(1, 2, 1)
+
     ax = plt.gca()
     for index in np.unique(predicted_instances):
         cluster = label_embedding[:, predicted_instances == index]
@@ -133,79 +139,86 @@ def visualise_embeddings(label_embedding, predicted_instances):
         ax.add_patch(plt.Circle(cluster.mean(axis=1), radius=1.5, fill=False, linestyle='--'))
         ax.add_patch(plt.Circle(cluster.mean(axis=1), radius=0.5, fill=False, linestyle='--'))
 
+    if target_instances is not None:
+        plt.subplot(1, 2, 2)
+        for index in np.unique(target_instances):
+            cluster = label_embedding[:, target_instances == index]
+            plt.plot(*cluster, '+', label=index)
+
     plt.legend()
     plt.show()
 
 
-def visualise_instances(predicted_instances, labels):
+def visualise_instances(predicted_instances, labels, class_index=2):
     predicted_image = np.zeros(labels.shape).flatten()
 
     _, predicted_indices = np.unique(predicted_instances, return_inverse=True)
-    predicted_image[labels.view(-1).cpu().numpy() > 0] = predicted_indices + 1
+    predicted_image[labels.view(-1).cpu().numpy() == class_index] = predicted_indices + 1
 
     plt.imshow(predicted_image.reshape(labels.shape))
     plt.show()
 
 
-data = Slides(download=True, train=True, root='data')
+if __name__ == '__main__':
+    data = Slides(download=True, train=True, root='data')
 
-model = SemanticInstanceSegmentation().cuda()
-instance_clustering = DiscriminativeLoss().cuda()
+    model = SemanticInstanceSegmentation().cuda()
+    instance_clustering = DiscriminativeLoss().cuda()
 
-imgs = [torch.Tensor(np.asarray(Image.open(filename)).transpose(2, 0, 1)[np.newaxis])
-        for filename in ['image.png', 'image2.png']]
-img_instances = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
-                 for filename in ['image_instances.png', 'image_instances2.png']]
-img_labels = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
-              for filename in ['image_labels.png', 'image_labels2.png']]
+    imgs = [torch.Tensor(np.asarray(Image.open(filename)).transpose(2, 0, 1)[np.newaxis])
+            for filename in ['image.png', 'image2.png']]
+    img_instances = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
+                     for filename in ['image_instances.png', 'image_instances2.png']]
+    img_labels = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
+                  for filename in ['image_labels.png', 'image_labels2.png']]
 
-train = False
+    train = False
 
-if train:
-    # model.pretrained.load_state_dict(torch.load(Path('models') / 'epoch_3200'))
+    if train:
+        # model.pretrained.load_state_dict(torch.load(Path('models') / 'epoch_3200'))
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.1)
-    model.train()
-    losses = np.zeros(450)
+        optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.1)
+        model.train()
+        losses = np.zeros(50)
 
-    for iteration in range(450):
-        scheduler.step()
-        optimizer.zero_grad()
+        for iteration in range(50):
+            scheduler.step()
+            optimizer.zero_grad()
 
-        for img, instances, labels in zip(imgs, img_instances, img_labels):
-            img = img.cuda()
-            instances = instances.cuda()
-            labels = labels.cuda()
+            for img, instances, labels in zip(imgs, img_instances, img_labels):
+                img = img.cuda()
+                instances = instances.cuda()
+                labels = labels.cuda()
 
-            _, instance_embeddings = model(Variable(img))
+                _, instance_embeddings = model(Variable(img))
 
-            loss = sum(instance_clustering(embeddings, target_clusters)
-                       for embeddings, target_clusters in SemanticLabels(instance_embeddings, labels, instances))
+                loss = sum(instance_clustering(embeddings, target_clusters)
+                           for embeddings, target_clusters in SemanticLabels(instance_embeddings, labels, instances))
 
-            print(iteration, loss.data[0])
-            losses[iteration] = loss.data[0]
-            loss.backward()
+                print(iteration, loss.data[0])
+                losses[iteration] = loss.data[0]
+                loss.backward()
 
-        optimizer.step()
+            optimizer.step()
 
-    torch.save(model.state_dict(), Path('models') / 'instance_model')
-else:
-    model.load_state_dict(torch.load(Path('models') / 'instance_model'))
+        torch.save(model.state_dict(), Path('models') / 'instance_model')
+    else:
+        model.load_state_dict(torch.load(Path('models') / 'instance_model'))
 
-img = imgs[0].cuda()
-instances = img_instances[0].cuda()
-labels = img_labels[0].cuda()
+    img = imgs[0].cuda()
+    instances = img_instances[0].cuda()
+    labels = img_labels[0].cuda()
 
-_, instance_embeddings = model(Variable(img))
-mask = labels.view(-1) > 0
-label_embedding = instance_embeddings.view(1, 2, -1)[..., mask]
-label_instances = instances.view(-1)[mask]
+    _, instance_embeddings = model(Variable(img))
+    mask = labels.view(-1) > 0
+    label_embedding = instance_embeddings.view(1, instance_embeddings.shape[1], -1)[..., mask]
+    label_instances = instances.view(-1)[mask]
 
-label_embedding = label_embedding.data.cpu().numpy()[0]
-label_instances = label_instances.cpu().numpy()
+    label_embedding = label_embedding.data.cpu().numpy()[0]
+    label_instances = label_instances.cpu().numpy()
 
-predicted_instances = mean_shift(label_embedding)
+    predicted_instances = mean_shift(label_embedding)
 
-visualise_embeddings(label_embedding, predicted_instances)
-visualise_instances(predicted_instances, labels)
+    # visualise_embeddings(label_embedding, predicted_instances)
+    visualise_instances(predicted_instances, labels)
