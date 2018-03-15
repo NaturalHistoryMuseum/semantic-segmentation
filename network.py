@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 
@@ -53,7 +54,6 @@ class DenseEmbedding(nn.Module):
         self.conv1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(256)
         self.relu = nn.ReLU()
-        self.dropout1 = nn.Dropout2d(p=0.5)
         self.conv2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(128)
 
@@ -61,9 +61,6 @@ class DenseEmbedding(nn.Module):
         self.up3 = UpsampleBlock(128, 32)
         self.up2 = UpsampleBlock(64, 16)
         self.up1 = UpsampleBlock(32, 8)
-
-        self.conv_class = nn.Conv2d(8, 5, kernel_size=1)
-        self.conv_instance = nn.Conv2d(8, 2, kernel_size=1)
 
     def forward(self, x):
         x, skip1 = self.down1(x)
@@ -73,8 +70,6 @@ class DenseEmbedding(nn.Module):
 
         x = self.conv1(x)
         x = self.bn1(self.relu(x))
-
-        x = self.dropout1(x)
 
         x = self.conv2(x)
         x = self.bn2(self.relu(x))
@@ -93,8 +88,6 @@ class SemanticInstanceSegmentation(nn.Module):
         self.embedding = DenseEmbedding()
         self.conv_semantic = nn.Conv2d(8, 5, kernel_size=1)
         self.conv_instance = nn.Conv2d(8, 2, kernel_size=1)
-        self.semantic_uncertainty = nn.Parameter(torch.Tensor([1]))
-        self.instance_uncertainty = nn.Parameter(torch.Tensor([1]))
 
     def forward(self, x):
         embedding = self.embedding(x)

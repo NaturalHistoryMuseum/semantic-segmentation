@@ -65,7 +65,7 @@ class SemanticLabels:
 
 
 class DiscriminativeLoss(nn.Module):
-    def __init__(self, alpha=1, beta=2, gamma=0.001, delta_v=0.5, delta_distance=1.5):
+    def __init__(self, alpha=1, beta=1, gamma=0.001, delta_v=0.5, delta_distance=1.5):
         super(DiscriminativeLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -155,8 +155,7 @@ def visualise_instances(predicted_instances, labels, class_index=2):
     _, predicted_indices = np.unique(predicted_instances, return_inverse=True)
     predicted_image[labels.view(-1).cpu().numpy() == class_index] = predicted_indices + 1
 
-    plt.imshow(predicted_image.reshape(labels.shape))
-    plt.show()
+    return predicted_image.reshape(labels.shape)
 
 
 if __name__ == '__main__':
@@ -221,4 +220,6 @@ if __name__ == '__main__':
     predicted_instances = mean_shift(label_embedding)
 
     # visualise_embeddings(label_embedding, predicted_instances)
-    visualise_instances(predicted_instances, labels)
+    prediction = visualise_instances(predicted_instances, labels)
+    plt.imshow(prediction)
+    plt.show()
