@@ -1,18 +1,10 @@
 from itertools import combinations
-from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 from sklearn.neighbors import NearestNeighbors
-import torch
 from torch import nn
-from torch import optim
-from torch.autograd import Variable
 import torch.nn.functional as F
-
-from datasets import Slides
-from network import SemanticInstanceSegmentation
 
 
 def nearest(nearest_neighbors, query):
@@ -149,7 +141,7 @@ def visualise_embeddings(label_embedding, predicted_instances, target_instances=
     plt.show()
 
 
-def visualise_instances(predicted_instances, labels, class_index=2):
+def visualise_class_instances(predicted_instances, labels, class_index=2):
     predicted_image = np.zeros(labels.shape).flatten()
 
     _, predicted_indices = np.unique(predicted_instances, return_inverse=True)
@@ -158,68 +150,12 @@ def visualise_instances(predicted_instances, labels, class_index=2):
     return predicted_image.reshape(labels.shape)
 
 
-if __name__ == '__main__':
-    data = Slides(download=True, train=True, root='data')
-
-    model = SemanticInstanceSegmentation().cuda()
-    instance_clustering = DiscriminativeLoss().cuda()
-
-    imgs = [torch.Tensor(np.asarray(Image.open(filename)).transpose(2, 0, 1)[np.newaxis])
-            for filename in ['image.png', 'image2.png']]
-    img_instances = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
-                     for filename in ['image_instances.png', 'image_instances2.png']]
-    img_labels = [torch.Tensor(instances_from_colors(np.asarray(Image.open(filename)).astype(np.uint8))).long()
-                  for filename in ['image_labels.png', 'image_labels2.png']]
-
-    train = False
-
-    if train:
-        # model.pretrained.load_state_dict(torch.load(Path('models') / 'epoch_3200'))
-
-        optimizer = optim.Adam(model.parameters(), lr=1e-3)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.1)
-        model.train()
-        losses = np.zeros(50)
-
-        for iteration in range(50):
-            scheduler.step()
-            optimizer.zero_grad()
-
-            for img, instances, labels in zip(imgs, img_instances, img_labels):
-                img = img.cuda()
-                instances = instances.cuda()
-                labels = labels.cuda()
-
-                _, instance_embeddings = model(Variable(img))
-
-                loss = sum(instance_clustering(embeddings, target_clusters)
-                           for embeddings, target_clusters in SemanticLabels(instance_embeddings, labels, instances))
-
-                print(iteration, loss.data[0])
-                losses[iteration] = loss.data[0]
-                loss.backward()
-
-            optimizer.step()
-
-        torch.save(model.state_dict(), Path('models') / 'instance_model')
-    else:
-        model.load_state_dict(torch.load(Path('models') / 'instance_model'))
-
-    img = imgs[0].cuda()
-    instances = img_instances[0].cuda()
-    labels = img_labels[0].cuda()
-
-    _, instance_embeddings = model(Variable(img))
-    mask = labels.view(-1) > 0
-    label_embedding = instance_embeddings.view(1, instance_embeddings.shape[1], -1)[..., mask]
-    label_instances = instances.view(-1)[mask]
-
-    label_embedding = label_embedding.data.cpu().numpy()[0]
-    label_instances = label_instances.cpu().numpy()
-
-    predicted_instances = mean_shift(label_embedding)
-
-    # visualise_embeddings(label_embedding, predicted_instances)
-    prediction = visualise_instances(predicted_instances, labels)
-    plt.imshow(prediction)
-    plt.show()
+def visualise_instances(predicted_instances, labels, num_classes):
+    instance_image = np.zeros(labels.shape)
+    total = -1
+    for class_index in range(1, num_classes):
+        class_instances = visualise_class_instances(predicted_instances[class_index], labels, class_index=class_index)
+        class_instances[class_instances > 0] += total + 1
+        total = class_instances.max()
+        instance_image += class_instances
+    return instance_image

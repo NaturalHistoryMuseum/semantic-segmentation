@@ -9,3 +9,4 @@ data
 **/*.zip
 **/*.jpg
 **/*.log
+.ipynb_checkpoints/**/*
