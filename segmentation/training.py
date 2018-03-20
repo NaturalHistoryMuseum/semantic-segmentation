@@ -51,13 +51,13 @@ def torch_zip(*args):
 def train(model, instance_clustering, train_loader, test_loader):
     cross_entropy = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = lr_scheduler.StepLR(optimizer, 2500, gamma=0.1)
+    scheduler = lr_scheduler.StepLR(optimizer, 300, gamma=0.1)
 
     losses = {'train': {'semantic': [], 'instance': [], 'total': []},
               'test':  {'semantic': [], 'instance': [], 'total': []}}
     accuracies = {'train': [], 'test': []}
 
-    for epoch in range(12000):
+    for epoch in range(800):
         scheduler.step()
 
         if epoch % scheduler.step_size == 0:
