@@ -8,6 +8,7 @@ import zipfile
 import h5py
 import numpy as np
 from PIL import Image
+import torch
 from torch.utils import data
 
 
@@ -202,6 +203,9 @@ class Slides(SemanticSegmentationDataset):
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
+        with h5py.File(self.datafile, 'r') as f:
+            counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
+            self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
 
     def process_label_image_files(self, folder_path, colours, f_train, f_test):
         train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)

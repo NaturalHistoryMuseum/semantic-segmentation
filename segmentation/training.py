@@ -52,7 +52,8 @@ def torch_zip(*args):
 
 
 def train(model, instance_clustering, train_loader_labelled, train_loader_unlabelled, test_loader_labelled, test_loader_unlabelled):
-    cross_entropy = nn.CrossEntropyLoss()
+    weights = train_loader_labelled.dataset.weights.cuda()
+    cross_entropy = nn.CrossEntropyLoss(reduce=False)
     l2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     scheduler = lr_scheduler.StepLR(optimizer, 25, gamma=0.1)
@@ -89,6 +90,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
+                weighted_semantic_loss = (weights.index_select(dim=0, index=labels.view(-1)) * semantic_loss).mean()
 
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
@@ -96,7 +98,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
                                     for image_instance_embeddings, image_labels, image_instances
                                     in torch_zip(instance_embeddings, labels, instances))
 
-                loss += semantic_loss * 10 + instance_loss
+                loss += weighted_semantic_loss * 10 + instance_loss
 
                 predicted_class = logits.data.max(1, keepdim=True)[1]
                 correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
