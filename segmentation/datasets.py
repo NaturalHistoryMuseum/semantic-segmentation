@@ -307,3 +307,19 @@ class Slides(SemanticSegmentationDataset):
             self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
 
         print('Done!')
+
+
+class ImageFolder(data.Dataset):
+    def __init__(self, root, transform=identity):
+        self.samples = list(Path(root).glob('*.JPG'))
+
+        self.transform = transform
+
+    def __getitem__(self, index):
+        path = self.samples[index]
+        img = Image.open(path)
+
+        return self.transform(img)
+
+    def __len__(self):
+        return len(self.samples)
