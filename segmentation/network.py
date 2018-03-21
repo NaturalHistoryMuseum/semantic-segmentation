@@ -17,9 +17,16 @@ class DenseEmbedding(nn.Module):
         self.atrous2 = nn.Conv2d(128, 128, kernel_size=3, dilation=6, padding=6, groups=128)
         self.atrous3 = nn.Conv2d(128, 128, kernel_size=3, dilation=12, padding=12, groups=128)
         self.atrous4 = nn.Conv2d(128, 128, kernel_size=3, dilation=18, padding=18, groups=128)
-        self.pool = nn.AvgPool2d((32, 96))
 
         self.conv1 = nn.Conv2d(640, 128, kernel_size=1)
+
+    @staticmethod
+    def global_avg_pool2d(x):
+        return x.mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
+
+    @staticmethod
+    def global_features(x):
+        return DenseEmbedding.global_avg_pool2d(x).expand_as(x)
 
     def forward(self, x, corrupted=False, variance=1):
         z1 = self.downsample1(x)
@@ -27,7 +34,7 @@ class DenseEmbedding(nn.Module):
             z1 += variance * torch.randn_like(z1)
         z2 = self.downsample2(z1)
 
-        convs = (self.atrous1, self.atrous2, self.atrous3, self.atrous4, lambda x: self.pool(x).expand(-1, -1, 32, 96))
+        convs = (self.atrous1, self.atrous2, self.atrous3, self.atrous4, self.global_features)
         atrous_pyramid = torch.cat([conv(z2) for conv in convs], dim=1)
 
         return z1, z2, self.conv1(atrous_pyramid)
