@@ -28,15 +28,18 @@ def visualise_segmentation(predicted_class, colours):
     return class_image / 255
 
 
-def visualise_results(output, image, predicted_class, colours, n=5, dpi=250):
-    gs = gridspec.GridSpec(2, n, width_ratios=[1]*n, wspace=0.1, hspace=0, top=0.95, left=0.17, right=0.845)
-    plt.figure(figsize=(n, 2))
+def visualise_results(output, original_image, reconstructed_image, predicted_class, colours, n=5, dpi=500):
+    gs = gridspec.GridSpec(3, n, width_ratios=[2.42]*n, wspace=0.05, hspace=0)
+    plt.figure(figsize=(n * 2.42, 3))
 
     for i in range(n):
         plt.subplot(gs[0, i])
-        plt.imshow(image.data[i].cpu().numpy().transpose(1, 2, 0))
+        plt.imshow(original_image.data[i].cpu().numpy().transpose(1, 2, 0))
         plt.axis('off')
         plt.subplot(gs[1, i])
+        plt.imshow(reconstructed_image.data[i].cpu().numpy().transpose(1, 2, 0))
+        plt.axis('off')
+        plt.subplot(gs[2, i])
         plt.imshow(visualise_segmentation(predicted_class[i], colours))
         plt.axis('off')
     plt.savefig(str(output), dpi=dpi, bbox_inches='tight')
@@ -151,7 +154,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
         #     logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
 
         if (epoch + 1) % 1 == 0:
-            visualise_results(Path('results') / f'epoch_{epoch + 1}.png', x_hat, predicted_class,
+            visualise_results(Path('results') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
                               colours=train_loader_labelled.dataset.colours)
             np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
             np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
