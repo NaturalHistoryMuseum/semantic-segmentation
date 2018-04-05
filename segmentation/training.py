@@ -1,4 +1,4 @@
-from itertools import chain, cycle, islice
+from itertools import islice
 import logging
 from pathlib import Path
 
@@ -28,7 +28,8 @@ def visualise_segmentation(predicted_class, colours):
     return class_image / 255
 
 
-def visualise_results(output, original_image, reconstructed_image, predicted_class, colours, n=5, dpi=500):
+def visualise_results(output, original_image, reconstructed_image, predicted_class, colours, dpi=500):
+    n = original_image.shape[0]
     gs = gridspec.GridSpec(3, n, width_ratios=[2.42]*n, wspace=0.05, hspace=0)
     plt.figure(figsize=(n * 2.42, 3))
 
@@ -51,18 +52,17 @@ def torch_zip(*args):
         yield tuple(item.unsqueeze(0) for item in items)
 
 
-def train(model, instance_clustering, train_loader_labelled, train_loader_unlabelled, test_loader_labelled, test_loader_unlabelled):
-    weights = train_loader_labelled.dataset.weights.cuda()
-    cross_entropy = nn.CrossEntropyLoss(reduce=False)
-    l2 = nn.MSELoss()
+def train(model, instance_clustering, train_loader, test_loader):
+    cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights.cuda())
+    L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = lr_scheduler.StepLR(optimizer, 25, gamma=0.1)
+    scheduler = lr_scheduler.StepLR(optimizer, 10, gamma=0.1)
 
     losses = {'train': {'semantic': [], 'instance': [], 'total': []},
               'test':  {'semantic': [], 'instance': [], 'total': []}}
     accuracies = {'train': [], 'test': []}
 
-    for epoch in range(100):
+    for epoch in range(30):
         scheduler.step()
 
         if epoch % scheduler.step_size == 0:
@@ -70,7 +70,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
 
         model.train()
 
-        for i, training_data in enumerate(chain(*zip(train_loader_unlabelled, cycle(train_loader_labelled)))):
+        for i, training_data in enumerate(train_loader):
             labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
 
             if labelled:
@@ -84,13 +84,12 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
 
             z_hat1, x_hat, logits, instance_embeddings = model(image)
             z1 = model.forward_clean(image)[0]
-            reconstruction_loss = l2(z_hat1, Variable(z1.data, requires_grad=False)) + l2(x_hat, image)
+            reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
 
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
-                weighted_semantic_loss = (weights.index_select(dim=0, index=labels.view(-1)) * semantic_loss).mean()
 
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
@@ -98,7 +97,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
                                     for image_instance_embeddings, image_labels, image_instances
                                     in torch_zip(instance_embeddings, labels, instances))
 
-                loss += weighted_semantic_loss * 10 + instance_loss
+                loss += semantic_loss * 10 + instance_loss
 
                 predicted_class = logits.data.max(1, keepdim=True)[1]
                 correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
@@ -140,7 +139,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
         #             #                     in torch_zip(instance_embeddings, labels, instances))
         #             #
         #             # loss = semantic_loss * 10 + instance_loss
-        #             loss = l2(z_hat1, z1) + l2(x_hat, image)
+        #             loss = L2(z_hat1, z1) + L2(x_hat, image)
         #
         #             total_loss += loss.item()
         #
@@ -157,7 +156,7 @@ def train(model, instance_clustering, train_loader_labelled, train_loader_unlabe
 
         if (epoch + 1) % 1 == 0:
             visualise_results(Path('results') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
-                              colours=train_loader_labelled.dataset.colours)
+                              colours=train_loader.labelled.dataset.colours)
             np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
             np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
 

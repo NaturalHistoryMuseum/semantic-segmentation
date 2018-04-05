@@ -75,9 +75,15 @@ class SemanticInstanceSegmentation(nn.Module):
         self.variance = variance
         self.embedding = DenseEmbedding()
         self.reconstruction = Reconstruction()
-        self.conv_semantic = nn.Sequential(nn.Conv2d(128, 5, kernel_size=1),
+        self.conv_semantic = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
+                                           nn.ReLU(),
+                                           nn.BatchNorm2d(128),
+                                           nn.Conv2d(128, 5, kernel_size=1),
                                            nn.Upsample(scale_factor=8, mode='bilinear'))
-        self.conv_instance = nn.Sequential(nn.Conv2d(128, 2, kernel_size=1),
+        self.conv_instance = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
+                                           nn.ReLU(),
+                                           nn.BatchNorm2d(128),
+                                           nn.Conv2d(128, 2, kernel_size=1),
                                            nn.Upsample(scale_factor=8, mode='bilinear'))
 
     def forward_clean(self, x):

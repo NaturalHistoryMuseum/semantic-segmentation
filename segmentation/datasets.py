@@ -1,3 +1,4 @@
+from itertools import chain, cycle
 from pathlib import Path
 import random
 import shutil
@@ -197,9 +198,9 @@ class CamVid(SemanticSegmentationDataset):
 
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
-        self.train_size = 13
-        self.test_size = 13
-        self.height = 330
+        self.train_size = 30
+        self.test_size = 30
+        self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
@@ -280,21 +281,21 @@ class Slides(SemanticSegmentationDataset):
 
         (self.raw_folder / 'images').mkdir(exist_ok=True)
         for filename in sorted(folder.glob('*.JPG')):
-            shutil.copy(filename, self.raw_folder / 'images' / filename.parts[-1])
+            shutil.copy(filename, self.raw_folder / 'images' / filename.name)
 
         print(f'Copying labels')
 
         (self.raw_folder / 'labels').mkdir(exist_ok=True)
         for filename in sorted(folder.glob('*.png')):
             if 'label' in str(filename):
-                shutil.copy(filename, self.raw_folder / 'labels' / filename.parts[-1])
+                shutil.copy(filename, self.raw_folder / 'labels' / filename.name)
 
         print(f'Copying labels')
 
         (self.raw_folder / 'instances').mkdir(exist_ok=True)
         for filename in sorted(folder.glob('*.png')):
             if 'instance' in str(filename):
-                shutil.copy(filename, self.raw_folder / 'instances' / filename.parts[-1])
+                shutil.copy(filename, self.raw_folder / 'instances' / filename.name)
 
         print(f'Copying class file')
 
@@ -327,3 +328,12 @@ class ImageFolder(data.Dataset):
 
     def __len__(self):
         return len(self.samples)
+
+
+class SemiSupervisedDataLoader:
+    def __init__(self, loader_labelled, loader_unlablled):
+        self.labelled = loader_labelled
+        self.unlabelled = loader_unlablled
+
+    def __iter__(self):
+        return chain(*zip(self.unlabelled, cycle(self.labelled)))
