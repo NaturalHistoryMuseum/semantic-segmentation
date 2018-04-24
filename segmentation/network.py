@@ -9,7 +9,7 @@ class DenseEmbedding(nn.Module):
 
         pretrained = resnet18(pretrained=True)
 
-        # split ResNet into downsampling layers to enable reconstruction losses
+        # split ResNet into individual layers to enable reconstruction losses
         self.downsample1 = nn.Sequential(pretrained.conv1, pretrained.bn1, pretrained.relu, pretrained.maxpool)
         self.downsample2 = nn.Sequential(pretrained.layer1, pretrained.layer2)
 
