@@ -101,16 +101,16 @@ def train(model, instance_clustering, train_loader, test_loader):
 
                 predicted_class = logits.data.max(1, keepdim=True)[1]
                 correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
-                accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+                accuracy = correct_prediction.int().sum() / np.prod(predicted_class.shape)
 
             loss.backward()
             optimizer.step()
 
-            # losses['train']['semantic'].append(semantic_loss.item())
-            # losses['train']['instance'].append(instance_loss.item())
-            losses['train']['total'].append(loss.item())
+            # losses['train']['semantic'].append(semantic_loss.data[0])
+            # losses['train']['instance'].append(instance_loss.data[0])
+            losses['train']['total'].append(loss.data[0])
             # accuracies['train'].append(accuracy)
-            info = f'Epoch: {epoch + 1:{3}}, Batch: {i:{3}}, Loss: {loss.item()}'
+            info = f'Epoch: {epoch + 1:{3}}, Batch: {i:{3}}, Loss: {loss.data[0]}'
             if labelled:
                 info += f', Accuracy: {(accuracy * 100)}%'
             logging.info(info)
@@ -141,11 +141,11 @@ def train(model, instance_clustering, train_loader, test_loader):
         #             # loss = semantic_loss * 10 + instance_loss
         #             loss = L2(z_hat1, z1) + L2(x_hat, image)
         #
-        #             total_loss += loss.item()
+        #             total_loss += loss.data[0]
         #
         #             predicted_class = logits.data.max(1, keepdim=True)[1]
         #             correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
-        #             accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+        #             accuracy = correct_prediction.int().sum().data[0] / np.prod(predicted_class.shape)
         #             total_accuracy += accuracy
         #
         #     average_loss = total_loss / num_test_batches
