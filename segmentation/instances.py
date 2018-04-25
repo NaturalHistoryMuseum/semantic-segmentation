@@ -3,7 +3,6 @@ from itertools import combinations
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neighbors import NearestNeighbors
-import torch
 from torch import nn
 import torch.nn.functional as F
 
@@ -28,10 +27,10 @@ class Clustering:
     def __init__(self, embedding, cluster):
         self.embedding = embedding
         self.cluster = cluster
-        self.indices = [int(i) for i in np.unique(cluster.cpu().data.numpy())]
+        self.indices = [int(i) for i in np.unique(cluster.cpu().numpy())]
 
     def __getitem__(self, index):
-        return self.embedding[:, :, (self.cluster == index).nonzero()].mean(dim=2, keepdim=True)
+        return self.embedding[:, :, self.cluster == index].mean(dim=2, keepdim=True)
 
     def __iter__(self):
         for index in self.indices:
@@ -47,12 +46,12 @@ class SemanticLabels:
 
     def __getitem__(self, index):
         mask = self.labels.view(-1) == index
-        embeddings = self.embeddings.view(1, self.dimensions, -1)[..., mask.nonzero()].view(1, self.dimensions, -1)
+        embeddings = self.embeddings.view(1, self.dimensions, -1)[..., mask]
         target_instances = self.instances.view(-1)[mask]
         return embeddings, Clustering(embeddings, target_instances)
 
     def __iter__(self):
-        for index in np.unique(self.labels.cpu().data.numpy()):
+        for index in np.unique(self.labels.cpu().numpy()):
             if index > 0:
                 yield self[int(index)]
 

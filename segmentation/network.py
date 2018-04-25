@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.autograd import Variable
 from torchvision.models import resnet18
 
 
@@ -32,7 +31,7 @@ class DenseEmbedding(nn.Module):
     def forward(self, x, corrupted=False, variance=1):
         z1 = self.downsample1(x)
         if corrupted:
-            z1 += variance * Variable(torch.randn(z1.shape)).cuda()
+            z1 += variance * torch.randn_like(z1)
         z2 = self.downsample2(z1)
 
         convs = (self.atrous1, self.atrous2, self.atrous3, self.atrous4, self.global_features)
@@ -92,7 +91,7 @@ class SemanticInstanceSegmentation(nn.Module):
         return z1, self.conv_semantic(embedding), self.conv_instance(embedding)
 
     def forward(self, x):
-        x_tilde = x + self.variance * Variable(torch.randn(x.shape)).cuda()
+        x_tilde = x + self.variance * torch.randn_like(x)
         z_tilde1, z_hat2, embedding = self.embedding(x_tilde, corrupted=True, variance=self.variance)
         z_hat1, x_hat = self.reconstruction(x_tilde, z_tilde1, z_hat2)
         return z_hat1, x_hat, self.conv_semantic(embedding), self.conv_instance(embedding)
