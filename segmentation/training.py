@@ -29,6 +29,9 @@ def visualise_segmentation(predicted_class, colours):
 
 
 def visualise_results(output, original_image, reconstructed_image, predicted_class, colours, dpi=500):
+    if not output.parent.exists():
+        output.parent.mkdir()
+
     n = original_image.shape[0]
     gs = gridspec.GridSpec(3, n, width_ratios=[2.42]*n, wspace=0.05, hspace=0)
     plt.figure(figsize=(n * 2.42, 3))
