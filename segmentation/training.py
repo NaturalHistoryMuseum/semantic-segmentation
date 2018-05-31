@@ -56,7 +56,7 @@ def torch_zip(*args):
 
 
 def train(model, instance_clustering, train_loader, test_loader):
-    cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights.cuda())
+    cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     scheduler = lr_scheduler.StepLR(optimizer, 10, gamma=0.1)
@@ -73,15 +73,16 @@ def train(model, instance_clustering, train_loader, test_loader):
 
         model.train()
 
-        for i, training_data in enumerate(train_loader):
+        for i in range(len(train_loader.labelled.dataset)):
+            training_data=train_loader.labelled.dataset[i]
             labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
 
             if labelled:
                 image, labels, instances = training_data
-                image, labels, instances = Variable(image).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
+                image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels), Variable(instances)
             else:
                 image = training_data
-                image = Variable(image).cuda()
+                image = Variable(image)
 
             optimizer.zero_grad()
 
@@ -89,7 +90,7 @@ def train(model, instance_clustering, train_loader, test_loader):
             z1 = model.forward_clean(image)[0]
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
-
+            print(loss)
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
@@ -157,11 +158,11 @@ def train(model, instance_clustering, train_loader, test_loader):
         #     accuracies['test'].append(average_accuracy)
         #     logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
 
-        if (epoch + 1) % 1 == 0:
-            visualise_results(Path('results') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
-                              colours=train_loader.labelled.dataset.colours)
-            np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
-            np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
+            if (epoch + 1) % 1 == 0:
+                visualise_results(Path('models') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
+                                  colours=train_loader.labelled.dataset.colours)
+                np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
+                np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
 
-        if (epoch + 1) % 2 == 0:
-            torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
+            if (epoch + 1) % 2 == 0:
+                torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
