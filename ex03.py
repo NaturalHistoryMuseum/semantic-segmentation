@@ -154,6 +154,6 @@ del (logits, instance_embeddings, image, labels,
 #1 data/slides_subset/010646725_816445_1431072.JPG
 #2 data/slides_subset/010646726_816445_1431072.JPG
 #3 data/slides_subset/010646727_816445_1431072.JPG
-for filename in Path('data', 'slides_subset').iterdir():
+for filename in Path('data', 'nhm_validate').iterdir():
     segment_this(filename)
 
