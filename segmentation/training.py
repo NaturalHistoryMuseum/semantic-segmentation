@@ -119,44 +119,44 @@ def train(model, instance_clustering, train_loader, test_loader):
                 info += f', Accuracy: {(accuracy * 100)}%'
             logging.info(info)
 
-        # if (epoch + 1) % 5 == 0:
-        #     model.eval()
-        #
-        #     total_loss = 0
-        #     total_accuracy = 0
-        #
-        #     num_test_batches = 1
-        #
-        #     with torch.no_grad():
-        #         for image, labels, instances in islice(test_loader, num_test_batches):
-        #             image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
-        #
-        #             z_hat1, x_hat, logits, instance_embeddings = model(image)
-        #             z1 = model.forward_clean(image)[0]
-        #             # logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
-        #             # semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
-        #             #
-        #             # instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
-        #             #                         for embeddings, target_clusters
-        #             #                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
-        #             #                     for image_instance_embeddings, image_labels, image_instances
-        #             #                     in torch_zip(instance_embeddings, labels, instances))
-        #             #
-        #             # loss = semantic_loss * 10 + instance_loss
-        #             loss = L2(z_hat1, z1) + L2(x_hat, image)
-        #
-        #             total_loss += loss.item()
-        #
-        #             predicted_class = logits.data.max(1, keepdim=True)[1]
-        #             correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
-        #             accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
-        #             total_accuracy += accuracy
-        #
-        #     average_loss = total_loss / num_test_batches
-        #     average_accuracy = total_accuracy / num_test_batches
-        #     losses['test']['total'].append(average_loss)
-        #     accuracies['test'].append(average_accuracy)
-        #     logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
+            if (epoch + 1) % 5 == 0:
+                model.eval()
+        
+                total_loss = 0
+                total_accuracy = 0
+        
+                num_test_batches = 1
+        
+                with torch.no_grad():
+                    for image, labels, instances in islice(test_loader, num_test_batches):
+                        image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
+        
+                        z_hat1, x_hat, logits, instance_embeddings = model(image)
+                        z1 = model.forward_clean(image)[0]
+                      # logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
+                      # semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
+                      #
+                      # instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
+                      #                         for embeddings, target_clusters
+                      #                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
+                      #                     for image_instance_embeddings, image_labels, image_instances
+                      #                     in torch_zip(instance_embeddings, labels, instances))
+                      #
+                      # loss = semantic_loss * 10 + instance_loss
+                        loss = L2(z_hat1, z1) + L2(x_hat, image)
+        
+                        total_loss += loss.item()
+        
+                        predicted_class = logits.data.max(1, keepdim=True)[1]
+                        correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
+                        accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+                        total_accuracy += accuracy
+        
+                average_loss = total_loss / num_test_batches
+                average_accuracy = total_accuracy / num_test_batches
+                losses['test']['total'].append(average_loss)
+                accuracies['test'].append(average_accuracy)
+                logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
 
             if (epoch + 1) % 1 == 0:
                 visualise_results(Path('models') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,

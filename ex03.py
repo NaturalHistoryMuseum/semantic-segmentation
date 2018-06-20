@@ -120,27 +120,27 @@ for class_index in range(5):
 
 #[6] Visualise training ** need to visualise training results to get colors right
 
-plt.rcParams['image.cmap'] = 'Paired'
-
-fig, axes = plt.subplots(3, 2, figsize=(15, 10))
-for ax in axes.flatten(): ax.axis('off')
-
-axes[0, 0].set_title('Original image')
-axes[0, 0].imshow(image[0].data.numpy().transpose(1, 2, 0))
-axes[1, 0].set_title('Ground truth classes')
-axes[1, 0].imshow(current_labels.cpu().numpy().squeeze())
-axes[2, 0].set_title('Ground truth instances')
-axes[2, 0].imshow(current_instances.cpu().numpy().squeeze())
-axes[1, 1].set_title('Predicted classes')
-axes[1, 1].imshow(predicted_class.cpu().numpy().squeeze())
-instance_image = visualise_instances(predicted_instances, predicted_class, num_classes=5)
-axes[2, 1].set_title('Predicted instances')
-axes[2, 1].imshow(instance_image)
-
-#plt.gcf().clear() #clears but leaves previous figure on
-plt.clf()
-plt.cla()
-plt.close()
+##plt.rcParams['image.cmap'] = 'Paired'
+##
+##fig, axes = plt.subplots(3, 2, figsize=(15, 10))
+##for ax in axes.flatten(): ax.axis('off')
+##
+##axes[0, 0].set_title('Original image')
+##axes[0, 0].imshow(image[0].data.numpy().transpose(1, 2, 0))
+##axes[1, 0].set_title('Ground truth classes')
+##axes[1, 0].imshow(current_labels.cpu().numpy().squeeze())
+##axes[2, 0].set_title('Ground truth instances')
+##axes[2, 0].imshow(current_instances.cpu().numpy().squeeze())
+##axes[1, 1].set_title('Predicted classes')
+##axes[1, 1].imshow(predicted_class.cpu().numpy().squeeze())
+##instance_image = visualise_instances(predicted_instances, predicted_class, num_classes=5)
+##axes[2, 1].set_title('Predicted instances')
+##axes[2, 1].imshow(instance_image)
+##
+###plt.gcf().clear() #clears but leaves previous figure on
+##plt.clf()
+##plt.cla()
+##plt.close()
 
 #[7] Explicitly clear GPU **
 ##del (logits, instance_embeddings, instance_image, image, labels,
@@ -154,6 +154,6 @@ del (logits, instance_embeddings, image, labels,
 #1 data/slides_subset/010646725_816445_1431072.JPG
 #2 data/slides_subset/010646726_816445_1431072.JPG
 #3 data/slides_subset/010646727_816445_1431072.JPG
-for filename in Path('data', 'nhm_validate').iterdir():
+for filename in Path('data', 'nhm_test').iterdir():
     segment_this(filename)
 
