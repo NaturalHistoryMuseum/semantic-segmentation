@@ -72,14 +72,14 @@ def train(model, instance_clustering, train_loader, test_loader):
             logging.debug(f'Learning rate set to {scheduler.get_lr()[0]}')
 
         model.train()
-
+        image = labels = instances = None
         for i in range(len(train_loader.labelled.dataset)):
             training_data=train_loader.labelled.dataset[i]
             labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
 
             if labelled:
                 image, labels, instances = training_data
-                image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels), Variable(instances)
+                image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels.unsqueeze(0)), Variable(instances)
             else:
                 image = training_data
                 image = Variable(image)
@@ -90,7 +90,7 @@ def train(model, instance_clustering, train_loader, test_loader):
             z1 = model.forward_clean(image)[0]
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
-            print(loss)
+            
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
@@ -119,50 +119,50 @@ def train(model, instance_clustering, train_loader, test_loader):
                 info += f', Accuracy: {(accuracy * 100)}%'
             logging.info(info)
 
-            if (epoch + 1) % 5 == 0:
-                model.eval()
-        
-                total_loss = 0
-                total_accuracy = 0
-        
-                num_test_batches = 1
-        
-                with torch.no_grad():
-                    for image, labels, instances in islice(test_loader, num_test_batches):
-                        image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
-        
-                        z_hat1, x_hat, logits, instance_embeddings = model(image)
-                        z1 = model.forward_clean(image)[0]
-                      # logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
-                      # semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
-                      #
-                      # instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
-                      #                         for embeddings, target_clusters
-                      #                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
-                      #                     for image_instance_embeddings, image_labels, image_instances
-                      #                     in torch_zip(instance_embeddings, labels, instances))
-                      #
-                      # loss = semantic_loss * 10 + instance_loss
-                        loss = L2(z_hat1, z1) + L2(x_hat, image)
-        
-                        total_loss += loss.item()
-        
-                        predicted_class = logits.data.max(1, keepdim=True)[1]
-                        correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
-                        accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
-                        total_accuracy += accuracy
-        
-                average_loss = total_loss / num_test_batches
-                average_accuracy = total_accuracy / num_test_batches
-                losses['test']['total'].append(average_loss)
-                accuracies['test'].append(average_accuracy)
-                logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
+##            if (epoch + 1) % 5 == 0:
+##                model.eval()
+##        
+##                total_loss = 0
+##                total_accuracy = 0
+##        
+##                num_test_batches = 1
+##        
+##                with torch.no_grad():
+##                    for image, labels, instances in islice(test_loader, num_test_batches):
+##                        image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
+##        
+##                        z_hat1, x_hat, logits, instance_embeddings = model(image)
+##                        z1 = model.forward_clean(image)[0]
+##                      # logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
+##                      # semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
+##                      #
+##                      # instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
+##                      #                         for embeddings, target_clusters
+##                      #                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
+##                      #                     for image_instance_embeddings, image_labels, image_instances
+##                      #                     in torch_zip(instance_embeddings, labels, instances))
+##                      #
+##                      # loss = semantic_loss * 10 + instance_loss
+##                        loss = L2(z_hat1, z1) + L2(x_hat, image)
+##        
+##                        total_loss += loss.item()
+##        
+##                        predicted_class = logits.data.max(1, keepdim=True)[1]
+##                        correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
+##                        accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+##                        total_accuracy += accuracy
+##        
+##                average_loss = total_loss / num_test_batches
+##                average_accuracy = total_accuracy / num_test_batches
+##                losses['test']['total'].append(average_loss)
+##                accuracies['test'].append(average_accuracy)
+##                logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
 
-            if (epoch + 1) % 1 == 0:
-                visualise_results(Path('models') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
-                                  colours=train_loader.labelled.dataset.colours)
-                np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
-                np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
+        if (epoch + 1) % 1 == 0:
+            visualise_results(Path('models') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
+                              colours=train_loader.labelled.dataset.colours)
+            np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
+            np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
 
-            if (epoch + 1) % 2 == 0:
-                torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
+        if (epoch + 1) % 2 == 0:
+            torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')

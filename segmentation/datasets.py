@@ -79,7 +79,7 @@ class SemanticSegmentationDataset(data.Dataset):
         return img, target
 
     def __len__(self):
-        return self.train_size if self.train else self.test_size
+        return self.train_size if self.train else self.test_screate_datasetize
 
     def process_raw_image_files(self, folder_path, f_train, f_test, extension='*.JPG'):
         train_set = f_train.create_dataset('images', (self.train_size, self.height, self.width, 3), dtype=np.float32)
@@ -204,10 +204,10 @@ class CamVid(SemanticSegmentationDataset):
 
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
-        #test splitting the labelled set 70/30
-        #total of 135 images split as 95 for training and 40 for testing
-        self.train_size = 95 
-        self.test_size = 40
+        # Should test splitting the labelled set 70/30
+        # total of 135 images split as 95 for training and 40 for testing
+        self.train_size = 30 
+        self.test_size = 30
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
