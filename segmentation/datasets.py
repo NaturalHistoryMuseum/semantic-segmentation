@@ -79,7 +79,7 @@ class SemanticSegmentationDataset(data.Dataset):
         return img, target
 
     def __len__(self):
-        return self.train_size if self.train else self.test_screate_datasetize
+        return self.train_size if self.train else self.test_size
 
     def process_raw_image_files(self, folder_path, f_train, f_test, extension='*.JPG'):
         train_set = f_train.create_dataset('images', (self.train_size, self.height, self.width, 3), dtype=np.float32)
@@ -88,7 +88,6 @@ class SemanticSegmentationDataset(data.Dataset):
         for i, image in enumerate(images):
             if i < self.train_size:
                 train_set[i] = np.asarray(image) / 255
-                test_set[i] = np.asarray(image) / 255  # hack!!
             else:
                 test_set[i - self.train_size] = np.asarray(image) / 255
 
@@ -206,8 +205,9 @@ class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Should test splitting the labelled set 70/30
         # total of 135 images split as 95 for training and 40 for testing
-        self.train_size = 30 
-        self.test_size = 30
+        # start dividing 30 as 21-9
+        self.train_size = 21 
+        self.test_size = 9
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
@@ -232,7 +232,7 @@ class Slides(SemanticSegmentationDataset):
 
             if i < self.train_size:
                 train_set[i] = key[index]
-                test_set[i] = key[index]  # hack!!
+                #test_set[i] = key[index]  # hack!!
             else:
                 test_set[i - self.train_size] = key[index]
 
@@ -248,7 +248,7 @@ class Slides(SemanticSegmentationDataset):
 
             if i < self.train_size:
                 train_set[i] = indices.reshape(image.shape[:2])
-                test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
+                #test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
             else:
                 test_set[i - self.train_size] = indices.reshape(image.shape[:2])
 
