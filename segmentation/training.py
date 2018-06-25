@@ -166,3 +166,61 @@ def train(model, instance_clustering, train_loader, test_loader):
 
         if (epoch + 1) % 2 == 0:
             torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
+
+def evaluateepochs(model, instance_clustering, test_loader):
+    #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
+    L2 = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = lr_scheduler.StepLR(optimizer, 10, gamma=0.1)
+
+    losses = {'train': {'semantic': [], 'instance': [], 'total': []},
+              'test':  {'semantic': [], 'instance': [], 'total': []}}
+    accuracies = {'train': [], 'test': []}
+
+    for epoch in range(30):
+        if (epoch + 1) % 2 == 0:
+            epoch_file = 'models/epoch_'+str(epoch + 1)
+            model.load_state_dict(torch.load(epoch_file))
+            model.eval()
+            
+            image = labels = instances = None
+            
+            total_loss = 0
+            total_accuracy = 0
+            
+            num_test_batches = 1
+            for i in range(len(test_loader.labelled.dataset)):
+                num_test_batches = i+1
+                testing_data=test_loader.labelled.dataset[i]
+                labelled = isinstance(testing_data, tuple) or isinstance(testing_data, list)
+                if labelled:
+                    image, labels, instances = testing_data
+                    image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels.unsqueeze(0)), Variable(instances)
+                else:
+                    image = testing_data
+                    image = Variable(image)
+                with torch.no_grad():
+                    #image, labels, instances = (Variable(tensor) for tensor in (image, labels, instances))
+                    z_hat1, x_hat, logits, instance_embeddings = model(image)
+
+                    z1 = model.forward_clean(image)[0]
+
+                    loss = L2(z_hat1, z1) + L2(x_hat, image)
+
+                    total_loss += loss.item()
+
+                    predicted_class = logits.data.max(1, keepdim=True)[1]
+                    correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
+                    #print("test", i, "batches", num_test_batches,"predicted class:", np.prod(predicted_class.shape),"correct prediction:", correct_prediction.int().sum().item())
+                    accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+                    #print ("accuracy", accuracy)
+                    total_accuracy += accuracy
+
+            #print ("test batches", num_test_batches)
+            #print ("total accuracy", total_accuracy)
+            average_loss = total_loss / num_test_batches
+            average_accuracy = total_accuracy / num_test_batches
+            losses['test']['total'].append(average_loss)
+            accuracies['test'].append(average_accuracy)
+            logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
+            #break

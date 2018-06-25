@@ -204,10 +204,11 @@ class CamVid(SemanticSegmentationDataset):
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Should test splitting the labelled set 70/30
-        # total of 135 images split as 95 for training and 40 for testing
-        # start dividing 30 as 21-9
-        self.train_size = 21 
-        self.test_size = 9
+        # first try:   30 split 21 -  9
+        # second try  135 split 95 - 40
+        
+        self.train_size = 95 
+        self.test_size  = 40
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
