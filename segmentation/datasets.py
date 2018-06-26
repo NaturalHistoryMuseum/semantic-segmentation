@@ -207,8 +207,8 @@ class Slides(SemanticSegmentationDataset):
         # first try:   30 split 21 -  9
         # second try  135 split 95 - 40
         
-        self.train_size = 95 
-        self.test_size  = 40
+        self.train_size = 21 
+        self.test_size  = 9
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
