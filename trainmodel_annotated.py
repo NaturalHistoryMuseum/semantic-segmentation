@@ -57,19 +57,26 @@ batch_size = 3
 train_data_labelled = Slides(download=True, train=True, root='data', transform=transform, target_transform=target_transform)
 train_loader_labelled = torch.utils.data.DataLoader(train_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 # how many slides to  use?
+# tested using split 70/30 and 80/20 
 train_data_unlabelled = ImageFolder(root='data/slides', transform=transform)
 train_loader_unlabelled = torch.utils.data.DataLoader(train_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_loader = SemiSupervisedDataLoader(train_loader_labelled, train_loader_unlabelled)
 
 # is it ok for test dataset to be the same as the training dataset?
+# The latest version separates the upper part of the dataset for evaluation, no
+# testing against [additional] gold standard set has been done (10/07/2018)
 test_data_labelled = Slides(download=True, train=False, root='data', transform=transform, target_transform=target_transform)
 test_loader_labelled = torch.utils.data.DataLoader(test_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_data_unlabelled = ImageFolder(root='data/slides', transform=transform)
 test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabelled)
 
-#[4] Train
-train(model, instance_clustering, train_loader, test_loader)
+# [4] Train
+# Latest version extracts epochs as a parameter for training and evaluation
+epochs = 50
+train(model, instance_clustering, train_loader, test_loader, epochs)
 
-#[5] Evaluate
-#model.load_state_dict(torch.load('models/epoch_20'))
+# [5] Evaluate
+# Evaluate is performed on a separte script
+# model.load_state_dict(torch.load('models/epoch_20'))
+
