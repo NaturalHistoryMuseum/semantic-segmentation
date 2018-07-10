@@ -204,11 +204,16 @@ class CamVid(SemanticSegmentationDataset):
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Should test splitting the labelled set 70/30
-        # first try:   30 split 21 -  9
-        # second try  135 split 95 - 40
+
+        # first try:    30 split  21 -  9
+        # second try:  135 split  95 - 40
+        # third try:   165 split 116 - 49
+        # fouth try:   200 split 140 - 60
+        # fifth try:   200 split 160 - 40
+        # the splits above take the images in order from the soure directory
         
-        self.train_size = 95 
-        self.test_size  = 40
+        self.train_size = 140 
+        self.test_size  = 60
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
@@ -319,7 +324,6 @@ class Slides(SemanticSegmentationDataset):
             self.process_raw_image_files(self.raw_folder / 'images', f_train, f_test, extension='*.JPG')
             self.process_label_image_files(self.raw_folder / 'labels', self.colours, f_train, f_test)
             self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
-
         print('Done!')
 
 

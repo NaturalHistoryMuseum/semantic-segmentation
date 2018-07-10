@@ -55,7 +55,7 @@ def torch_zip(*args):
         yield tuple(item.unsqueeze(0) for item in items)
 
 
-def train(model, instance_clustering, train_loader, test_loader):
+def train(model, instance_clustering, train_loader, test_loader, epochs):
     cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -65,7 +65,7 @@ def train(model, instance_clustering, train_loader, test_loader):
               'test':  {'semantic': [], 'instance': [], 'total': []}}
     accuracies = {'train': [], 'test': []}
 
-    for epoch in range(30):
+    for epoch in range(epochs):
         scheduler.step()
 
         if epoch % scheduler.step_size == 0:
@@ -159,7 +159,7 @@ def train(model, instance_clustering, train_loader, test_loader):
 ##                logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
 
         if (epoch + 1) % 1 == 0:
-            visualise_results(Path('models') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
+            visualise_results(Path('results') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
                               colours=train_loader.labelled.dataset.colours)
             np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
             np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
@@ -167,7 +167,7 @@ def train(model, instance_clustering, train_loader, test_loader):
         if (epoch + 1) % 2 == 0:
             torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
 
-def evaluateepochs(model, instance_clustering, test_loader):
+def evaluateepochs(model, instance_clustering, test_loader, epochs):
     #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -177,7 +177,7 @@ def evaluateepochs(model, instance_clustering, test_loader):
               'test':  {'semantic': [], 'instance': [], 'total': []}}
     accuracies = {'train': [], 'test': []}
 
-    for epoch in range(30):
+    for epoch in range(epochs):
         if (epoch + 1) % 2 == 0:
             epoch_file = 'models/epoch_'+str(epoch + 1)
             model.load_state_dict(torch.load(epoch_file))

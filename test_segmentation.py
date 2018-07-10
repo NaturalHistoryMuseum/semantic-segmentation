@@ -43,7 +43,7 @@ def segment_this(model, filename):
 model = SemanticInstanceSegmentation() #From network
 
 #[3] Evaluate ** need to load model to evaluate
-model.load_state_dict(torch.load('models/epoch_20'))
+model.load_state_dict(torch.load('models/epoch_26'))
 model.eval()
 
 #[4]Evaluate on full images
@@ -53,4 +53,4 @@ model.eval()
 for filename in Path('data', 'nhm_test_180625_resized').iterdir():
   if not "labels" in filename.name and not "instances" in filename.name and not "classes" in filename.name:
     segment_this(model, filename)
-    break
+    #break
