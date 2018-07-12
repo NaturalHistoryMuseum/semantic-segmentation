@@ -212,8 +212,8 @@ class Slides(SemanticSegmentationDataset):
         # fifth try:   200 split 160 - 40
         # the splits above take the images in order from the soure directory
         
-        self.train_size = 140 
-        self.test_size  = 60
+        self.train_size = 160 
+        self.test_size  = 40
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
