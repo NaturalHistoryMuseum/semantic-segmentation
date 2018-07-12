@@ -214,6 +214,7 @@ class Slides(SemanticSegmentationDataset):
         
         self.train_size = 160 
         self.test_size  = 40
+
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
