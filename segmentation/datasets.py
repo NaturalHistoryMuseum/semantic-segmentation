@@ -329,6 +329,128 @@ class Slides(SemanticSegmentationDataset):
         print('Done!')
 
 
+class HerbariumSheets(SemanticSegmentationDataset):
+    def __init__(self, *args, **kwargs):
+        # Test splitting the labelled set 80/20
+        # first:   70 split 56 - 14
+        self.train_size = 56 
+        self.test_size  = 14
+        
+        # Pixel Dimensions of Herbarium Sheets
+        self.height = 1764
+        self.width = 1169
+
+        super(HerbariumSheets, self).__init__(*args, **kwargs)
+        self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
+        with h5py.File(self.datafile, 'r') as f:
+            counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
+            self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
+
+    def process_label_image_files(self, folder_path, colours, f_train, f_test):
+        train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
+        test_set = f_test.create_dataset('labels', (self.test_size, self.height, self.width), dtype=np.int64)
+        images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
+        
+        values = ((np.array(colours) // 255) * np.array([1, 2, 4]).reshape(1, 3)).sum(axis=1)
+        key = np.argsort(values)
+        values.sort()
+        
+        for i, image in enumerate(images):
+            image = 1 * (np.asarray(image) > 128)
+            image_colours = (image * np.array([1, 2, 4]).reshape(1, 1, 3)).sum(axis=2)
+            index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
+
+            if i < self.train_size:
+                train_set[i] = key[index]
+                #test_set[i] = key[index]  # hack!!
+            else:
+                test_set[i - self.train_size] = key[index]
+
+    def process_instance_image_files(self, folder_path, f_train, f_test):
+        train_set = f_train.create_dataset('instances', (self.train_size, self.height, self.width), dtype=np.int64)
+        test_set = f_test.create_dataset('instances', (self.test_size, self.height, self.width), dtype=np.int64)
+        images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
+
+        for i, image in enumerate(images):
+            image = np.asarray(image)
+            image_colors = image.reshape(-1, 3)
+            colors, indices = np.unique(image_colors, axis=0, return_inverse=True)
+
+            if i < self.train_size:
+                train_set[i] = indices.reshape(image.shape[:2])
+                #test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
+            else:
+                test_set[i - self.train_size] = indices.reshape(image.shape[:2])
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, labels, instances)
+        """
+        with h5py.File(self.datafile, 'r') as f:
+            img = f['images'][index]
+            labels = f['labels'][index]
+            instances = f['instances'][index]
+
+        # doing this so that it is consistent with all other datasets to return a PIL Image
+        img = Image.fromarray((img * 255).astype(np.uint8), mode='RGB')
+        labels = Image.fromarray(labels.astype(np.uint8), mode='L')
+        instances = Image.fromarray(instances.astype(np.uint8), mode='L')
+
+        seed = np.random.randint(2147483647)
+        random.seed(seed)
+        img = self.transform(img)
+        random.seed(seed)
+        labels = self.target_transform(labels)
+        random.seed(seed)
+        instances = self.target_transform(instances)
+
+        return img, labels, instances
+
+    def download(self):
+        self.raw_folder.mkdir(exist_ok=True, parents=True)
+        self.processed_folder.mkdir(exist_ok=True, parents=True)
+
+        folder = Path().absolute().parent / 'TrainingHerbariumSheets'
+
+        print(f'Copying images')
+
+        (self.raw_folder / 'images').mkdir(exist_ok=True)
+        for filename in sorted(folder.glob('*.jpg')):
+            shutil.copy(filename, self.raw_folder / 'images' / filename.name)
+
+        print(f'Copying labels')
+
+        (self.raw_folder / 'labels').mkdir(exist_ok=True)
+        for filename in sorted(folder.glob('*_labels.png')):
+            if 'label' in str(filename):
+                shutil.copy(filename, self.raw_folder / 'labels' / filename.name)
+
+        print(f'Copying instances')
+
+        (self.raw_folder / 'instances').mkdir(exist_ok=True)
+        for filename in sorted(folder.glob('*_instances.png')):
+            if 'instance' in str(filename):
+                shutil.copy(filename, self.raw_folder / 'instances' / filename.name)
+
+        print(f'Copying class file')
+
+        shutil.copy(folder / 'label_colours.txt', self.processed_folder / 'label_colors.txt')
+
+        # process and save as torch files
+        print('Processing...')
+
+        self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
+
+        with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:
+            self.process_raw_image_files(self.raw_folder / 'images', f_train, f_test, extension='*.JPG')
+            self.process_label_image_files(self.raw_folder / 'labels', self.colours, f_train, f_test)
+            self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
+        print('Done!')
+
+
 class ImageFolder(data.Dataset):
     def __init__(self, root, transform=identity):
         self.samples = list(Path(root).glob('*.JPG'))
