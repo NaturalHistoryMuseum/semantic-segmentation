@@ -205,15 +205,16 @@ class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Should test splitting the labelled set 70/30
 
-        # first try:    30 split  21 -  9
-        # second try:  135 split  95 - 40
-        # third try:   165 split 116 - 49
-        # fouth try:   200 split 140 - 60
-        # fifth try:   200 split 160 - 40
+        # first:    30 split  21 -  9
+        # second:  135 split  95 - 40
+        # third:   165 split 116 - 49
+        # fouth:   200 split 140 - 60
+        # fifth:   200 split 160 - 40
+	# sixth:   300 split 240 - 60
         # the splits above take the images in order from the soure directory
         
-        self.train_size = 160 
-        self.test_size  = 40
+        self.train_size = 240 
+        self.test_size  = 60
 
         self.height = 300
         self.width = 800
@@ -305,7 +306,7 @@ class Slides(SemanticSegmentationDataset):
             if 'label' in str(filename):
                 shutil.copy(filename, self.raw_folder / 'labels' / filename.name)
 
-        print(f'Copying labels')
+        print(f'Copying instances')
 
         (self.raw_folder / 'instances').mkdir(exist_ok=True)
         for filename in sorted(folder.glob('*.png')):
