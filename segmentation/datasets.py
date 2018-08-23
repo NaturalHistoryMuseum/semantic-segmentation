@@ -332,9 +332,9 @@ class Slides(SemanticSegmentationDataset):
 class HerbariumSheets(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Test splitting the labelled set 80/20
-        # first:   70 split 56 - 14
-        self.train_size = 56 
-        self.test_size  = 14
+        # first:   30 split 21 - 9
+        self.train_size = 21 
+        self.test_size  = 9
         
         # Pixel Dimensions of Herbarium Sheets
         self.height = 1764
@@ -345,16 +345,17 @@ class HerbariumSheets(SemanticSegmentationDataset):
         with h5py.File(self.datafile, 'r') as f:
             counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
             self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
+            
 
     def process_label_image_files(self, folder_path, colours, f_train, f_test):
         train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
         test_set = f_test.create_dataset('labels', (self.test_size, self.height, self.width), dtype=np.int64)
         images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
-        
+
         values = ((np.array(colours) // 255) * np.array([1, 2, 4]).reshape(1, 3)).sum(axis=1)
         key = np.argsort(values)
         values.sort()
-        
+
         for i, image in enumerate(images):
             image = 1 * (np.asarray(image) > 128)
             image_colours = (image * np.array([1, 2, 4]).reshape(1, 1, 3)).sum(axis=2)
@@ -418,7 +419,7 @@ class HerbariumSheets(SemanticSegmentationDataset):
         print(f'Copying images')
 
         (self.raw_folder / 'images').mkdir(exist_ok=True)
-        for filename in sorted(folder.glob('*.jpg')):
+        for filename in sorted(folder.glob('*.JPG')):
             shutil.copy(filename, self.raw_folder / 'images' / filename.name)
 
         print(f'Copying labels')
