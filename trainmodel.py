@@ -21,7 +21,7 @@ instance_clustering = DiscriminativeLoss() #From instances
 #[3] random transforms for pictures
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
-    transforms.RandomCrop((1500, 1000)),
+    transforms.RandomCrop((864, 576)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()])

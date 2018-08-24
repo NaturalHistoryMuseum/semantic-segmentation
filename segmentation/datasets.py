@@ -332,9 +332,9 @@ class Slides(SemanticSegmentationDataset):
 class HerbariumSheets(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Test splitting the labelled set 80/20
-        # first:   30 split 21 - 9
-        self.train_size = 21 
-        self.test_size  = 9
+        # first:   70 split 56 - 14
+        self.train_size = 56
+        self.test_size  = 14
         
         # Pixel Dimensions of Herbarium Sheets
         self.height = 1764

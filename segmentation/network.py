@@ -51,6 +51,7 @@ class UpsampleBlock(nn.Module):
 
     def forward(self, x, x_prev):
         x_prev = self.resize(x_prev)
+        #print(x.size(),x_prev.size())
         x = torch.cat([x, x_prev], dim=1)
         x = self.conv(x)
         return self.bn(self.relu(x))
@@ -93,5 +94,7 @@ class SemanticInstanceSegmentation(nn.Module):
     def forward(self, x):
         x_tilde = x + self.variance * torch.randn_like(x)
         z_tilde1, z_hat2, embedding = self.embedding(x_tilde, corrupted=True, variance=self.variance)
+        #print (x_tilde.dim(), z_tilde1.dim(), z_hat2.dim())
+        #print (x_tilde.size(), z_tilde1.size(), z_hat2.size())
         z_hat1, x_hat = self.reconstruction(x_tilde, z_tilde1, z_hat2)
         return z_hat1, x_hat, self.conv_semantic(embedding), self.conv_instance(embedding)

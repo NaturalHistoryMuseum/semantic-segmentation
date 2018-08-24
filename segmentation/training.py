@@ -90,10 +90,12 @@ def train(model, instance_clustering, train_loader, test_loader, epochs):
             z1 = model.forward_clean(image)[0]
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
-            
+
+            # magic number 5 corresponds to classes
+            classes = 5
             if labelled:
-                logits_per_pixel = logits.view(image.shape[0], 5, -1).transpose(1, 2).contiguous()
-                semantic_loss = cross_entropy(logits_per_pixel.view(-1, 5), labels.view(-1))
+                logits_per_pixel = logits.view(image.shape[0], classes, -1).transpose(1, 2).contiguous()
+                semantic_loss = cross_entropy(logits_per_pixel.view(-1, classes), labels.view(-1))
 
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
