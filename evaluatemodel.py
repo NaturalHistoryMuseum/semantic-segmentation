@@ -21,7 +21,7 @@ instance_clustering = DiscriminativeLoss() #From instances
 #[3] random transforms for pictures
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
-    transforms.RandomCrop((864, 576)),
+    transforms.RandomCrop((1728, 1152)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()])
@@ -46,7 +46,7 @@ print(test_loader)
 #for image, labels, instances in iter(test_loader)
 #  print(image, labels, instances)
 #[4] Train model
-epochs = 30
+epochs = 50
 evaluateepochs(model, instance_clustering, test_loader, 30)
 
 

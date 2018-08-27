@@ -21,7 +21,7 @@ instance_clustering = DiscriminativeLoss() #From instances
 #[3] random transforms for pictures
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
-    transforms.RandomCrop((864, 576)),
+    transforms.RandomCrop((1728, 1152)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()])
@@ -48,7 +48,7 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 
 #[4] Train model
-epochs = 30
+epochs = 50
 train(model, instance_clustering, train_loader, test_loader, epochs)
 
 
