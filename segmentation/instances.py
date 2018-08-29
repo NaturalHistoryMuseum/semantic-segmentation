@@ -10,7 +10,6 @@ import torch.nn.functional as F
 def nearest(nearest_neighbors, query):
     return nearest_neighbors.kneighbors(query, n_neighbors=1, return_distance=False)[0][0]
 
-
 NearestNeighbors.nearest = nearest
 
 

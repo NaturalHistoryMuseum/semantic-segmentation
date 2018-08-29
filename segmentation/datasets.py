@@ -12,7 +12,6 @@ from PIL import Image
 import torch
 from torch.utils import data
 
-
 def identity(x):
     """To be used in place of explicitly checking whether there are transforms to be applied"""
     return x
@@ -341,6 +340,9 @@ class HerbariumSheets(SemanticSegmentationDataset):
         self.width = 1169
 
         super(HerbariumSheets, self).__init__(*args, **kwargs)
+        # read color classes from the file and asign them to:
+        # self.class_to_idx as labels
+        # self.colours as color codes
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
         with h5py.File(self.datafile, 'r') as f:
             counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))

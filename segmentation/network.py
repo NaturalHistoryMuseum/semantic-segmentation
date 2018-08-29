@@ -72,6 +72,8 @@ class Reconstruction(nn.Module):
 
 class SemanticInstanceSegmentation(nn.Module):
     def __init__(self, variance=0.1):
+        # number 4 on nn.Conv2d corresponds to classes
+        classes=4
         super(SemanticInstanceSegmentation, self).__init__()
         self.variance = variance
         self.embedding = DenseEmbedding()
@@ -79,7 +81,7 @@ class SemanticInstanceSegmentation(nn.Module):
         self.conv_semantic = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
                                            nn.ReLU(),
                                            nn.BatchNorm2d(128),
-                                           nn.Conv2d(128, 5, kernel_size=1),
+                                           nn.Conv2d(128, classes, kernel_size=1),
                                            nn.Upsample(scale_factor=8, mode='bilinear'))
         self.conv_instance = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
                                            nn.ReLU(),

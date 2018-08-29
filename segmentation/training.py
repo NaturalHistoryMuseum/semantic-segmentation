@@ -13,7 +13,6 @@ from torch.optim import lr_scheduler
 
 from segmentation.instances import SemanticLabels
 
-
 logging.basicConfig(format='[%(asctime)s] %(message)s', filename='training.log', filemode='w', level=logging.DEBUG)
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
@@ -85,18 +84,16 @@ def train(model, instance_clustering, train_loader, test_loader, epochs):
                 image = Variable(image)
 
             optimizer.zero_grad()
-
             z_hat1, x_hat, logits, instance_embeddings = model(image)
             z1 = model.forward_clean(image)[0]
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
 
-            # magic number 5 corresponds to classes
-            classes = 5
+            # number 5 corresponds to classes
+            classes = 4
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], classes, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, classes), labels.view(-1))
-
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
                                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
