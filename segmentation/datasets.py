@@ -336,8 +336,8 @@ class HerbariumSheets(SemanticSegmentationDataset):
         self.test_size  = 14
         
         # Pixel Dimensions of Herbarium Sheets
-        self.height = 1764
-        self.width = 1169
+        self.height = 1323
+        self.width = 877
 
         super(HerbariumSheets, self).__init__(*args, **kwargs)
         # read color classes from the file and asign them to:
