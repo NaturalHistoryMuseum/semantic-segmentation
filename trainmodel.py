@@ -19,9 +19,12 @@ model = SemanticInstanceSegmentation() #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures
+#    cropping for herbarium sheets:
+#      72 dpi = h: 1728 w: 1152
+#      96 dpi = h: 1320 w:  872
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
-    transforms.RandomCrop((1320, 872)),
+    transforms.RandomCrop((1728, 1152)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()])
