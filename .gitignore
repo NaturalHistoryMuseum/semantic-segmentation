@@ -10,4 +10,6 @@ data
 **/*.zip
 **/*.jpg
 **/*.log
+**/*.sh
+**/*.out
 .ipynb_checkpoints/**/*
