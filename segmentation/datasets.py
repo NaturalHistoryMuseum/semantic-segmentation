@@ -327,14 +327,15 @@ class Slides(SemanticSegmentationDataset):
             self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
         print('Done!')
 
-
 class HerbariumSheets(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Test splitting the labelled set 80/20
         # first:   70 split  56 - 14
         # second: 168 split 134 - 34
-        self.train_size = 134
-        self.test_size  = 34
+        # reduced test batch processing 30 24-6
+        # third   250 split 200 - 50
+        self.train_size = 200
+        self.test_size  = 50
         
         # Pixel Dimensions of Herbarium Sheets
         #   h:1323 w:877(72 dpi)

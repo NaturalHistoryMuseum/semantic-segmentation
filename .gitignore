@@ -11,5 +11,6 @@ data
 **/*.jpg
 **/*.log
 **/*.sh
+**/*.err
 **/*.out
 .ipynb_checkpoints/**/*

@@ -14,7 +14,7 @@ from segmentation.instances import DiscriminativeLoss, mean_shift, visualise_emb
 from segmentation.network import SemanticInstanceSegmentation
 from segmentation.training import train
 
-# this produces the segmented images from unlabelled slides as in jupyter example
+# this produces the segmented images from unlabelled images as in jupyter example
 def segment_this(model, filename):
    print("processing", filename.name)
    image = torch.Tensor((plt.imread(filename) / 255).transpose(2, 0, 1)).unsqueeze(0)
@@ -43,14 +43,16 @@ def segment_this(model, filename):
 model = SemanticInstanceSegmentation() #From network
 
 #[3] Evaluate ** need to load model to evaluate
-model.load_state_dict(torch.load('models/epoch_26'))
+model.load_state_dict(torch.load('models/epoch_42'))
 model.eval()
 
-#[4]Evaluate on full images
-#1 data/slides_subset/010646725_816445_1431072.JPG
-#2 data/slides_subset/010646726_816445_1431072.JPG
-#3 data/slides_subset/010646727_816445_1431072.JPG
-for filename in Path('data', 'nhm_test_180625_resized').iterdir():
+#[4]Evaluate on non-segmented images
+# preprocessing: 
+# - borders added
+# - resized
+# data/sheets/*.JPG
+
+for filename in Path('data', 'sheets01').iterdir():
   if not "labels" in filename.name and not "instances" in filename.name and not "classes" in filename.name:
     segment_this(model, filename)
     #break
