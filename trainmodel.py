@@ -20,8 +20,8 @@ instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures
 #    cropping for herbarium sheets:
-#      72 dpi = h: 1728 w: 1152
-#      96 dpi = h: 1320 w:  872
+#      96 dpi = h: 1728 w: 1152
+#      72 dpi = h: 1320 w:  872
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
     transforms.RandomCrop((1728, 1152)),
@@ -51,7 +51,7 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 
 #[4] Train model
-epochs = 30
+epochs = 40
 train(model, instance_clustering, train_loader, test_loader, epochs)
 
 

@@ -46,7 +46,7 @@ print(test_loader)
 #for image, labels, instances in iter(test_loader)
 #  print(image, labels, instances)
 #[4] Train model
-epochs = 30
+epochs = 50
 evaluateepochs(model, instance_clustering, test_loader, epochs)
 
 

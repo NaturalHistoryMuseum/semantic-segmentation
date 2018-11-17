@@ -84,11 +84,20 @@ class SemanticSegmentationDataset(data.Dataset):
         train_set = f_train.create_dataset('images', (self.train_size, self.height, self.width, 3), dtype=np.float32)
         test_set = f_test.create_dataset('images', (self.test_size, self.height, self.width, 3), dtype=np.float32)
         images = (Image.open(filename) for filename in sorted(folder_path.glob(extension)))
+        j=k=l=0
         for i, image in enumerate(images):
-            if i < self.train_size:
-                train_set[i] = np.asarray(image) / 255
+            if j>7:
+                #add it to the test set
+                test_set[k] = np.asarray(image) / 255
+                k+=1
             else:
-                test_set[i - self.train_size] = np.asarray(image) / 255
+                #add it to the train set
+                train_set[l] = np.asarray(image) / 255
+                l+=1
+            j+=1
+            if j>9:
+                j=0
+                
 
     def read_label_file(self, path):
         with open(path, 'r') as f:
@@ -327,14 +336,15 @@ class Slides(SemanticSegmentationDataset):
             self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
         print('Done!')
 
-
 class HerbariumSheets(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
         # Test splitting the labelled set 80/20
         # first:   70 split  56 - 14
         # second: 168 split 134 - 34
-        self.train_size = 134
-        self.test_size  = 34
+        # reduced test batch processing 30 24-6
+        # third   250 split 200 - 50
+        self.train_size = 200
+        self.test_size  = 50
         
         # Pixel Dimensions of Herbarium Sheets
         #   h:1323 w:877(72 dpi)
@@ -360,33 +370,41 @@ class HerbariumSheets(SemanticSegmentationDataset):
         values = ((np.array(colours) // 255) * np.array([1, 2, 4]).reshape(1, 3)).sum(axis=1)
         key = np.argsort(values)
         values.sort()
-
+        j=k=l=0
         for i, image in enumerate(images):
             image = 1 * (np.asarray(image) > 128)
             image_colours = (image * np.array([1, 2, 4]).reshape(1, 1, 3)).sum(axis=2)
             index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
-
-            if i < self.train_size:
-                train_set[i] = key[index]
-                #test_set[i] = key[index]  # hack!!
+        # split get 2 of every ten into the test set
+            if j>7:                
+                test_set[k] = key[index]
+                k+=1
             else:
-                test_set[i - self.train_size] = key[index]
+                train_set[l] = key[index]
+                l+=1
+            j+=1
+            if j>9:
+                j=0
 
     def process_instance_image_files(self, folder_path, f_train, f_test):
         train_set = f_train.create_dataset('instances', (self.train_size, self.height, self.width), dtype=np.int64)
         test_set = f_test.create_dataset('instances', (self.test_size, self.height, self.width), dtype=np.int64)
         images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
-
+        j=k=l=0
         for i, image in enumerate(images):
             image = np.asarray(image)
             image_colors = image.reshape(-1, 3)
             colors, indices = np.unique(image_colors, axis=0, return_inverse=True)
-
-            if i < self.train_size:
-                train_set[i] = indices.reshape(image.shape[:2])
-                #test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
+        # split get 2 of every ten into the test set
+            if j>7:                
+                test_set[k] = indices.reshape(image.shape[:2])
+                k+=1
             else:
-                test_set[i - self.train_size] = indices.reshape(image.shape[:2])
+                train_set[l] = indices.reshape(image.shape[:2])
+                l+=1
+            j+=1
+            if j>9:
+                j=0
 
     def __getitem__(self, index):
         """
