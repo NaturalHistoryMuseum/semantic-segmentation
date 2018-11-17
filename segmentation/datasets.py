@@ -97,7 +97,6 @@ class SemanticSegmentationDataset(data.Dataset):
             j+=1
             if j>9:
                 j=0
-                
 
     def read_label_file(self, path):
         with open(path, 'r') as f:
@@ -376,10 +375,12 @@ class HerbariumSheets(SemanticSegmentationDataset):
             image_colours = (image * np.array([1, 2, 4]).reshape(1, 1, 3)).sum(axis=2)
             index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
         # split get 2 of every ten into the test set
-            if j>7:                
+            if j>7:
+                #add image to the test set
                 test_set[k] = key[index]
                 k+=1
             else:
+                #add image to the train set
                 train_set[l] = key[index]
                 l+=1
             j+=1
@@ -396,10 +397,12 @@ class HerbariumSheets(SemanticSegmentationDataset):
             image_colors = image.reshape(-1, 3)
             colors, indices = np.unique(image_colors, axis=0, return_inverse=True)
         # split get 2 of every ten into the test set
-            if j>7:                
+            if j>7:
+                #add image to the test set
                 test_set[k] = indices.reshape(image.shape[:2])
                 k+=1
             else:
+                #add image to the train set
                 train_set[l] = indices.reshape(image.shape[:2])
                 l+=1
             j+=1

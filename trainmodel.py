@@ -51,11 +51,7 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 
 #[4] Train model
-<<<<<<< HEAD
 epochs = 40
-=======
-epochs = 50
->>>>>>> 0a49b491234c8b7cf0c734424fdc4b115944c67e
 train(model, instance_clustering, train_loader, test_loader, epochs)
 
 
