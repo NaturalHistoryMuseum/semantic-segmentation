@@ -202,6 +202,7 @@ class CamVid(SemanticSegmentationDataset):
 
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
+        
         # Should test splitting the labelled set 70/30
 
         # first:    30 split  21 -  9
@@ -211,10 +212,14 @@ class Slides(SemanticSegmentationDataset):
         # fifth:   200 split 160 - 40
 	# sixth:   300 split 240 - 60
         # the splits above take the images in order from the soure directory
-        
+        #**************************************************
+        #convert to parameter train and test size
+        #**************************************************
         self.train_size = 240 
         self.test_size  = 60
-
+        #**************************************************
+        #convert to parameter height and width
+        #**************************************************
         self.height = 300
         self.width = 800
         super(Slides, self).__init__(*args, **kwargs)
@@ -334,12 +339,19 @@ class HerbariumSheets(SemanticSegmentationDataset):
         # second: 168 split 134 - 34
         # reduced test batch processing 30 24-6
         # third   250 split 200 - 50
+        #**************************************************
+        #convert to parameter train and test size
+        #**************************************************
+
         self.train_size = 200
         self.test_size  = 50
         
         # Pixel Dimensions of Herbarium Sheets
         #   h:1323 w:877(72 dpi)
         #   h:1764 w:1169 (96 dpi)
+        #**************************************************
+        #convert to parameter height and width
+        #**************************************************
         self.height = 1764
         self.width = 1169
         
@@ -417,6 +429,10 @@ class HerbariumSheets(SemanticSegmentationDataset):
         return img, labels, instances
 
     def download(self):
+        #**************************************************
+        # convert to parameter directory structure
+        #**************************************************
+
         self.raw_folder.mkdir(exist_ok=True, parents=True)
         self.processed_folder.mkdir(exist_ok=True, parents=True)
 
@@ -443,12 +459,16 @@ class HerbariumSheets(SemanticSegmentationDataset):
                 shutil.copy(filename, self.raw_folder / 'instances' / filename.name)
 
         print(f'Copying class file')
+        
+        #******************************************************
+        # convert to parameter location and name of label file
+        #******************************************************
 
         shutil.copy(folder / 'label_colours.txt', self.processed_folder / 'label_colors.txt')
 
         # process and save as torch files
         print('Processing...')
-
+        
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
 
         with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:

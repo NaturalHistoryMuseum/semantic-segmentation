@@ -73,7 +73,10 @@ class Reconstruction(nn.Module):
 class SemanticInstanceSegmentation(nn.Module):
     def __init__(self, variance=0.1):
         # number 4 on nn.Conv2d corresponds to classes
-        classes=4
+        #**************************************************
+        # convert to parameter directory structure
+        #**************************************************
+        classes=5
         super(SemanticInstanceSegmentation, self).__init__()
         self.variance = variance
         self.embedding = DenseEmbedding()

@@ -22,6 +22,9 @@ instance_clustering = DiscriminativeLoss() #From instances
 #    cropping for herbarium sheets:
 #      96 dpi = h: 1728 w: 1152
 #      72 dpi = h: 1320 w:  872
+#***************************************************
+# convert to parameters random crop heigth and width
+#***************************************************
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
     transforms.RandomCrop((1728, 1152)),
@@ -31,6 +34,9 @@ transform = transforms.Compose([ #torchvision
 
 target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x * 255).long())])
 
+#**************************************************
+#convert to parameter batch size
+#**************************************************
 batch_size = 3
 
 # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
@@ -51,6 +57,9 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 
 #[4] Train model
+#**************************************************
+#convert to parameter epochs
+#**************************************************
 epochs = 50
 train(model, instance_clustering, train_loader, test_loader, epochs)
 

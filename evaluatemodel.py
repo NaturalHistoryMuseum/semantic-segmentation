@@ -19,6 +19,9 @@ model = SemanticInstanceSegmentation() #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures
+#**************************************************
+#convert to parameters random crop heigth and width
+#**************************************************
 transform = transforms.Compose([ #torchvision
     transforms.RandomRotation(5),
     transforms.RandomCrop((1728, 1152)),
@@ -28,6 +31,9 @@ transform = transforms.Compose([ #torchvision
 
 target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x * 255).long())])
 
+#**************************************************
+#convert to parameter batch_size
+#**************************************************
 batch_size = 3
 
 # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
@@ -46,6 +52,9 @@ print(test_loader)
 #for image, labels, instances in iter(test_loader)
 #  print(image, labels, instances)
 #[4] Train model
+#**************************************************
+#convert to parameter epochs
+#**************************************************
 epochs = 50
 evaluateepochs(model, instance_clustering, test_loader, epochs)
 

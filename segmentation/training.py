@@ -90,7 +90,10 @@ def train(model, instance_clustering, train_loader, test_loader, epochs):
             loss = 20 * reconstruction_loss
 
             # number 5 corresponds to classes
-            classes = 4
+            #**************************************************
+            #convert to parameter classes
+            #**************************************************
+            classes = 5
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], classes, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, classes), labels.view(-1))
