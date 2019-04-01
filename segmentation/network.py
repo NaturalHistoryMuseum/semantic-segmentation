@@ -74,7 +74,7 @@ class SemanticInstanceSegmentation(nn.Module):
     def __init__(self, variance=0.1):
         # number 4 on nn.Conv2d corresponds to classes
         #**************************************************
-        # convert to parameter directory structure
+        # convert to parameter number of classes
         #**************************************************
         classes=5
         super(SemanticInstanceSegmentation, self).__init__()
