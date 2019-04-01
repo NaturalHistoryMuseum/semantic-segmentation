@@ -15,11 +15,11 @@ from segmentation.network import SemanticInstanceSegmentation
 from segmentation.training import train
 
 #[2] create model and clustening function
-# set the number of label classes
-label_classes = 5
 #**************************************************
 # extracted label classes as parameters
 #**************************************************
+# set the number of label classes
+label_classes = 5
 model = SemanticInstanceSegmentation(label_classes = 5) #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
