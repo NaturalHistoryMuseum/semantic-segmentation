@@ -60,7 +60,7 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 #**************************************************
 #convert to parameter epochs
 #**************************************************
-epochs = 50
+epochs = 40
 train(model, instance_clustering, train_loader, test_loader, epochs)
 
 

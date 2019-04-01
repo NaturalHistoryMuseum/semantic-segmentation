@@ -55,7 +55,7 @@ print(test_loader)
 #**************************************************
 #convert to parameter epochs
 #**************************************************
-epochs = 50
+epochs = 40
 evaluateepochs(model, instance_clustering, test_loader, epochs)
 
 
