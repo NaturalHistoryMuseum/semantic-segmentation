@@ -69,14 +69,11 @@ class Reconstruction(nn.Module):
         x_hat = self.upsample1(x_tilde, z_hat1)
         return z_hat1, x_hat
 
-
+#**************************************************
+# extracted label_classes as parameter
+#**************************************************
 class SemanticInstanceSegmentation(nn.Module):
-    def __init__(self, variance=0.1):
-        # number 4 on nn.Conv2d corresponds to classes
-        #**************************************************
-        # convert to parameter number of classes
-        #**************************************************
-        classes=5
+    def __init__(self, label_classes = 5, variance=0.1):
         super(SemanticInstanceSegmentation, self).__init__()
         self.variance = variance
         self.embedding = DenseEmbedding()
@@ -84,7 +81,7 @@ class SemanticInstanceSegmentation(nn.Module):
         self.conv_semantic = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
                                            nn.ReLU(),
                                            nn.BatchNorm2d(128),
-                                           nn.Conv2d(128, classes, kernel_size=1),
+                                           nn.Conv2d(128, label_classes, kernel_size=1),
                                            nn.Upsample(scale_factor=8, mode='bilinear'))
         self.conv_instance = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1),
                                            nn.ReLU(),

@@ -15,7 +15,12 @@ from segmentation.network import SemanticInstanceSegmentation
 from segmentation.training import train
 
 #[2] create model and clustening function
-model = SemanticInstanceSegmentation() #From network
+# set the number of label classes
+label_classes = 5
+#**************************************************
+# extracted label classes as parameters
+#**************************************************
+model = SemanticInstanceSegmentation(label_classes = 5) #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures
@@ -58,9 +63,10 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 #[4] Train model
 #**************************************************
-#convert to parameter epochs
+# extracted epochs and label classes as parameters
 #**************************************************
 epochs = 40
-train(model, instance_clustering, train_loader, test_loader, epochs)
+label_classes = 5
+train(model, instance_clustering, train_loader, test_loader, epochs, label_classes)
 
 

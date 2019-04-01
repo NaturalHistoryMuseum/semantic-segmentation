@@ -53,8 +53,10 @@ def torch_zip(*args):
     for items in zip(*args):
         yield tuple(item.unsqueeze(0) for item in items)
 
-
-def train(model, instance_clustering, train_loader, test_loader, epochs):
+#**************************************************
+# extracted label_classes as parameter
+#**************************************************
+def train(model, instance_clustering, train_loader, test_loader, epochs, label_classes=5):
     cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -89,14 +91,9 @@ def train(model, instance_clustering, train_loader, test_loader, epochs):
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
 
-            # number 5 corresponds to classes
-            #**************************************************
-            #convert to parameter classes
-            #**************************************************
-            classes = 5
             if labelled:
-                logits_per_pixel = logits.view(image.shape[0], classes, -1).transpose(1, 2).contiguous()
-                semantic_loss = cross_entropy(logits_per_pixel.view(-1, classes), labels.view(-1))
+                logits_per_pixel = logits.view(image.shape[0], label_classes, -1).transpose(1, 2).contiguous()
+                semantic_loss = cross_entropy(logits_per_pixel.view(-1, label_classes), labels.view(-1))
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
                                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
