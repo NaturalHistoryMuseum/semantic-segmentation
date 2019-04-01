@@ -1,5 +1,7 @@
 from itertools import chain, cycle
 from pathlib import Path
+import configparser
+
 import random
 import shutil
 import tempfile
@@ -39,7 +41,7 @@ class SemanticSegmentationDataset(data.Dataset):
     @property
     def idx_to_class(self): return sorted(self.class_to_idx, key=self.class_to_idx.get)
 
-    def __init__(self, root, train=True, transform=identity, target_transform=identity, download=False):
+    def __init__(self, root, images_dir, train=True, transform=identity, target_transform=identity, download=False):
         
         self.root = Path(root).expanduser()
         self.transform = transform
@@ -124,117 +126,43 @@ class SemanticSegmentationDataset(data.Dataset):
             fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
 
-
-class CamVid(SemanticSegmentationDataset):
-    """`CamVid <http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/>`_ Dataset.
-    Args:
-        root (string): Root directory of dataset where ``processed/training.pt``
-            and  ``processed/test.pt`` exist.
-        train (bool, optional): If True, creates dataset from ``training.pt``,
-            otherwise from ``test.pt``.
-        download (bool, optional): If true, downloads the dataset from the internet and
-            puts it in root directory. If dataset is already downloaded, it is not
-            downloaded again.
-        transform (callable, optional): A function/transform that  takes in an PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes in the
-            target and transforms it.
-    """
-    urls = {'raw': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/files/701_StillsRaw_full.zip',
-            'labels': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/LabeledApproved_full.zip',
-            'classes': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/label_colors.txt'}
-
-    def __init__(self, *args, **kwargs):
-        super(CamVid, self).__init__(*args, **kwargs)
-        self.train_size = 525
-        self.test_size = 176
-        self.height = 720
-        self.width = 960
-
-    def process_label_image_files(self, folder_path, colours, f_train, f_test):
-        train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
-        test_set = f_test.create_dataset('labels', (self.test_size, self.height, self.width), dtype=np.int64)
-        images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
-
-        values = ((np.array(colours) // 64) * np.array([1, 4, 16]).reshape(1, 3)).sum(axis=1)
-        key = np.argsort(values)
-        values.sort()
-
-        for i, image in enumerate(images):
-            image_colours = ((np.asarray(image) // 64) * np.array([1, 4, 16]).reshape(1, 1, 3)).sum(axis=2)
-            index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
-
-            if i < self.train_size:
-                train_set[i] = key[index]
-            else:
-                test_set[i - self.train_size] = key[index]
-
-    def download(self):
-        """Download the CamVid data if it doesn't exist in processed_folder already."""
-        self.raw_folder.mkdir(exist_ok=True, parents=True)
-        self.processed_folder.mkdir(exist_ok=True, parents=True)
-
-        print(f'Downloading {self.urls["raw"]}')
-
-        data = urllib.request.urlopen(self.urls["raw"])
-        with tempfile.NamedTemporaryFile('w') as tmp:
-            tmp.write(data.read())
-            with zipfile.ZipFile(tmp.name) as zip_f:
-                zip_f.extractall(self.raw_folder)
-
-        print(f'Downloading {self.urls["labels"]}')
-
-        data = urllib.request.urlopen(self.urls["labels"])
-        with tempfile.NamedTemporaryFile('wb') as tmp:
-            tmp.write(data.read())
-            with zipfile.ZipFile(tmp.name) as zip_f:
-                zip_f.extractall(self.raw_folder / 'LabeledApproved_full')
-
-        print(f'Downloading {self.urls["classes"]}')
-
-        data = urllib.request.urlopen(self.urls["classes"])
-        with open(self.processed_folder / 'label_colors.txt', 'wb') as class_list:
-            class_list.write(data.read())
-
-        # process and save as torch files
-        print('Processing...')
-
-        self.class_to_idx, colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
-
-        with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:
-            self.process_raw_image_files(self.raw_folder / '701_StillsRaw_full', f_train, f_test)
-            self.process_label_image_files(self.raw_folder / 'LabeledApproved_full', colours, f_train, f_test)
-
-        print('Done!')
-
-
 class Slides(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
-        
-        # Should test splitting the labelled set 70/30
+        if "images_dir" in  kwargs.keys():
+            self.images_dir = kwargs["images_dir"]
+        else:
+            self.images_dir = "TrainingSlidesInstances"
 
-        # first:    30 split  21 -  9
-        # second:  135 split  95 - 40
-        # third:   165 split 116 - 49
-        # fouth:   200 split 140 - 60
-        # fifth:   200 split 160 - 40
-	# sixth:   300 split 240 - 60
-        # the splits above take the images in order from the soure directory
         #**************************************************
-        #convert to parameter train and test size
+        # convert to parameter train and test size
+        # convert to parameter height and width
         #**************************************************
-        self.train_size = 240 
-        self.test_size  = 60
-        #**************************************************
-        #convert to parameter height and width
-        #**************************************************
-        self.height = 300
-        self.width = 800
+        #read initial values from segmentation.ini            
+        ini_file = Path().absolute().parent / self.images_dir / "segmentation.ini"
+        if ini_file.exists():
+            print("reading values from ini file")
+            seg_config = configparser.ConfigParser()
+            seg_config.read(ini_file)
+            # sizes of training and testing datasets
+            self.train_size = int(seg_config['DEFAULT']["trainsize"])
+            self.test_size  = int(seg_config['DEFAULT']["testsize"])
+            # image dimensions
+            self.height = int(seg_config['DEFAULT']["imgheight"])
+            self.width = int(seg_config['DEFAULT']["imgwidth"])
+        else:
+            # sizes of training and testing datasets
+            self.train_size = 16 
+            self.test_size  = 4
+            # sizes of training and testing datasets
+            self.height = 300
+            self.width = 800
+            
         super(Slides, self).__init__(*args, **kwargs)
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
         with h5py.File(self.datafile, 'r') as f:
             counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
             self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
+        print(self.weights)
 
     def process_label_image_files(self, folder_path, colours, f_train, f_test):
         train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
@@ -303,7 +231,7 @@ class Slides(SemanticSegmentationDataset):
         self.raw_folder.mkdir(exist_ok=True, parents=True)
         self.processed_folder.mkdir(exist_ok=True, parents=True)
 
-        folder = Path().absolute().parent / 'TrainingSlidesInstances'
+        folder = Path().absolute().parent / self.images_dir
 
         print(f'Copying images')
 
@@ -342,27 +270,34 @@ class Slides(SemanticSegmentationDataset):
 
 class HerbariumSheets(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
-        # Test splitting the labelled set 80/20
-        # first:   70 split  56 - 14
-        # second: 168 split 134 - 34
-        # reduced test batch processing 30 24-6
-        # third   250 split 200 - 50
+        if "images_dir" in  kwargs.keys():
+            self.images_dir = kwargs["images_dir"]
+        else:
+            self.images_dir = "TrainingHerbariumSheets"
         #**************************************************
-        #convert to parameter train and test size
+        # convert to parameter train and test size
+        # convert to parameter height and width
         #**************************************************
-
-        self.train_size = 200
-        self.test_size  = 50
-        
-        # Pixel Dimensions of Herbarium Sheets
-        #   h:1323 w:877(72 dpi)
-        #   h:1764 w:1169 (96 dpi)
-        #**************************************************
-        #convert to parameter height and width
-        #**************************************************
-        self.height = 1764
-        self.width = 1169
-        
+        #read initial values from segmentation.ini            
+        ini_file = Path().absolute().parent / self.images_dir / "segmentation.ini"
+        if ini_file.exists():
+            print("reading values from ini file")
+            seg_config = configparser.ConfigParser()
+            seg_config.read(ini_file)
+            # sizes of training and testing datasets
+            self.train_size = int(seg_config['DEFAULT']["trainsize"])
+            self.test_size  = int(seg_config['DEFAULT']["testsize"])
+            # image dimensions
+            self.height = int(seg_config['DEFAULT']["imgheight"])
+            self.width = int(seg_config['DEFAULT']["imgwidth"])
+        else:
+            # sizes of training and testing datasets
+            self.train_size = 200 
+            self.test_size  = 50
+            # sizes of training and testing datasets
+            self.height = 1764
+            self.width = 1169
+                
         super(HerbariumSheets, self).__init__(*args, **kwargs)
         # read color classes from the file and asign them to:
         # self.class_to_idx as labels
@@ -456,7 +391,7 @@ class HerbariumSheets(SemanticSegmentationDataset):
         self.raw_folder.mkdir(exist_ok=True, parents=True)
         self.processed_folder.mkdir(exist_ok=True, parents=True)
 
-        folder = Path().absolute().parent / 'TrainingHerbariumSheets'
+        folder = Path().absolute().parent / self.images_dir
 
         print(f'Copying images')
 

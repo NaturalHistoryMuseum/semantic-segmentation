@@ -2,6 +2,7 @@
 #[1] Required libraries
 from pathlib import Path
 import random
+import configparser
 
 import matplotlib.pyplot as plt
 import torch
@@ -18,43 +19,67 @@ from segmentation.training import train
 #**************************************************
 # extracted label classes as parameters
 #**************************************************
+#read initial values from segmentation.ini
+source_dir = 'nmwherbarium'
+ini_file = Path().absolute().parent / source_dir / "segmentation.ini"
+if ini_file.exists():
+    seg_config = configparser.ConfigParser()
+    seg_config.read(ini_file)
+    # read rotation value
+    random_rotation = int(seg_config['DEFAULT']["randomrotation"])
+    # read number of labelling classes
+    label_classes = int(seg_config['DEFAULT']["labelclasses"])
+    # read cropping values
+    crop_height  = int(seg_config['DEFAULT']["cropheight"])
+    crop_width = int(seg_config['DEFAULT']["cropwidth"])
+    # default batch size
+    batch_size = int(seg_config['DEFAULT']["batchsize"])
+    # read number of labelling classes
+    label_classes = int(seg_config['DEFAULT']["labelclasses"])
+    # read number of epochs to train for
+    epochs = int(seg_config['DEFAULT']["trainepochs"])
+else:
+    # default rotation value
+    random_rotation = 5
+    # default values for slides
+    label_classes = 5 
+    crop_height  = 256
+    crop_width = 768
+    # default batch size
+    batch_size = 3
+    # default number labelling of classes
+    label_classes = 5
+    # default number of epochs to train for
+    epochs = 40
+    # default batch size
+    batch_size = 3
+
 # set the number of label classes
-label_classes = 5
-model = SemanticInstanceSegmentation(label_classes = 5) #From network
+model = SemanticInstanceSegmentation(label_classes) #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures
-#    cropping for herbarium sheets:
-#      96 dpi = h: 1728 w: 1152
-#      72 dpi = h: 1320 w:  872
-#***************************************************
-# convert to parameters random crop heigth and width
-#***************************************************
 transform = transforms.Compose([ #torchvision
-    transforms.RandomRotation(5),
-    transforms.RandomCrop((1728, 1152)),
+    transforms.RandomRotation(random_rotation),
+    transforms.RandomCrop((crop_height, crop_width)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor()])
 
 target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x * 255).long())])
 
-#**************************************************
-#convert to parameter batch size
-#**************************************************
-batch_size = 3
 
 # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
 # Slides: copies the data if required into the data/raw/images,
-# HerbariumSheets, labels] directories and returns
+# Slides, labels] directories and returns
 # import pdb; pdb.set_trace()
-train_data_labelled = HerbariumSheets(download=True, train=True, root='data', transform=transform, target_transform=target_transform)
+train_data_labelled = HerbariumSheets(download=True, train=True, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 train_loader_labelled = torch.utils.data.DataLoader(train_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_data_unlabelled = ImageFolder(root='data/sheets', transform=transform)
 train_loader_unlabelled = torch.utils.data.DataLoader(train_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_loader = SemiSupervisedDataLoader(train_loader_labelled, train_loader_unlabelled)
 
-test_data_labelled = HerbariumSheets(download=True, train=False, root='data', transform=transform, target_transform=target_transform)
+test_data_labelled = HerbariumSheets(download=True, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 test_loader_labelled = torch.utils.data.DataLoader(test_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_data_unlabelled = ImageFolder(root='data/sheets', transform=transform)
 test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
@@ -62,11 +87,6 @@ test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabel
 
 
 #[4] Train model
-#**************************************************
-# extracted epochs and label classes as parameters
-#**************************************************
-epochs = 40
-label_classes = 5
 train(model, instance_clustering, train_loader, test_loader, epochs, label_classes)
 
 

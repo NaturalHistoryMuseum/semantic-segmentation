@@ -5,6 +5,7 @@ training.log
 **/*.pyc
 **/*.npy
 data
+data01
 **/*.png
 **/*.JPG
 **/*.zip
