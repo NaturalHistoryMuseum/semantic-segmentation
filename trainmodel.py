@@ -3,6 +3,7 @@
 from pathlib import Path
 import random
 import configparser
+import shutil
 
 import matplotlib.pyplot as plt
 import torch
@@ -20,8 +21,9 @@ from segmentation.training import train
 # extracted label classes as parameters
 #**************************************************
 #read initial values from segmentation.ini
-source_dir = 'nmwherbarium'
+source_dir = 'nhmslides'
 ini_file = Path().absolute().parent / source_dir / "segmentation.ini"
+unlabelled_dir = Path().absolute().parent / source_dir / "unlabelled"
 if ini_file.exists():
     seg_config = configparser.ConfigParser()
     seg_config.read(ini_file)
@@ -54,6 +56,13 @@ else:
     # default batch size
     batch_size = 3
 
+if unlabelled_dir.exists():
+    #copy the unlabelled images to data/unlabelled
+    dest_dir = Path("data").expanduser()/'unlabelled'
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for filepath in sorted(unlabelled_dir.glob('*')):
+         shutil.copy(str(filepath), Path(dest_dir, filepath.name)) 
+    
 # set the number of label classes
 model = SemanticInstanceSegmentation(label_classes) #From network
 instance_clustering = DiscriminativeLoss() #From instances
@@ -75,13 +84,13 @@ target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x
 # import pdb; pdb.set_trace()
 train_data_labelled = HerbariumSheets(download=True, train=True, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 train_loader_labelled = torch.utils.data.DataLoader(train_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
-train_data_unlabelled = ImageFolder(root='data/sheets', transform=transform)
+train_data_unlabelled = ImageFolder(root='data/unlabelled', transform=transform)
 train_loader_unlabelled = torch.utils.data.DataLoader(train_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_loader = SemiSupervisedDataLoader(train_loader_labelled, train_loader_unlabelled)
 
 test_data_labelled = HerbariumSheets(download=True, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 test_loader_labelled = torch.utils.data.DataLoader(test_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
-test_data_unlabelled = ImageFolder(root='data/sheets', transform=transform)
+test_data_unlabelled = ImageFolder(root='data/unlabelled', transform=transform)
 test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabelled)
 

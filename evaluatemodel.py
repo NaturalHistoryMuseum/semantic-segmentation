@@ -20,7 +20,7 @@ from segmentation.training import train, evaluateepochs
 #**************************************************
 # set the number of label classes
 label_classes = 5
-model = SemanticInstanceSegmentation(label_classes = 5) #From network
+model = SemanticInstanceSegmentation(label_classes) #From network
 instance_clustering = DiscriminativeLoss() #From instances
 
 #[3] random transforms for pictures

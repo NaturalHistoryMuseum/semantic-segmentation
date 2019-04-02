@@ -88,7 +88,7 @@ class SemanticSegmentationDataset(data.Dataset):
         images = (Image.open(filename) for filename in sorted(folder_path.glob(extension)))
         j=k=l=0
         for i, image in enumerate(images):
-            if j>7:
+            if j>self.train_size-1:
                 #add it to the test set
                 test_set[k] = np.asarray(image) / 255
                 k+=1
