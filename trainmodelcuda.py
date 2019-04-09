@@ -21,7 +21,7 @@ from segmentation.training import train
 # extracted label classes as parameters
 #**************************************************
 #read initial values from segmentation.ini
-source_dir = 'nmwhs'
+source_dir = 'nmwhs_test'
 ini_file = Path().absolute().parent / source_dir / "segmentation.ini"
 unlabelled_dir = Path().absolute().parent / source_dir / "unlabelled"
 if ini_file.exists():
@@ -64,8 +64,8 @@ if unlabelled_dir.exists():
          shutil.copy(str(filepath), Path(dest_dir, filepath.name)) 
     
 # set the number of label classes
-model = SemanticInstanceSegmentation(label_classes) #From network
-instance_clustering = DiscriminativeLoss() #From instances
+model = SemanticInstanceSegmentation(label_classes).cuda() 
+instance_clustering = DiscriminativeLoss().cuda()
 
 #[3] random transforms for pictures
 transform = transforms.Compose([ #torchvision
