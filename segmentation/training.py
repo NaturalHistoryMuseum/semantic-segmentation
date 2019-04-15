@@ -57,7 +57,7 @@ def torch_zip(*args):
 # extracted label_classes as parameter
 #**************************************************
 def train(model, instance_clustering, train_loader, test_loader, epochs, label_classes=5):
-    cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
+    cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights.cuda())
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     scheduler = lr_scheduler.StepLR(optimizer, 10, gamma=0.1)
@@ -74,26 +74,32 @@ def train(model, instance_clustering, train_loader, test_loader, epochs, label_c
 
         model.train()
         image = labels = instances = None
-        for i in range(len(train_loader.labelled.dataset)):
-            training_data=train_loader.labelled.dataset[i]
-            labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
+#        for i in range(len(train_loader.labelled.dataset)):
+#            training_data=train_loader.labelled.dataset[i]
+#            labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
 
+        for i, training_data in enumerate(train_loader):
+            labelled = isinstance(training_data, tuple) or isinstance(training_data, list)
+#78
             if labelled:
                 image, labels, instances = training_data
-                image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels.unsqueeze(0)), Variable(instances)
+                image, labels, instances = Variable(image).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
             else:
                 image = training_data
-                image = Variable(image)
-
+                image = Variable(image).cuda()
+#85
             optimizer.zero_grad()
+#87
             z_hat1, x_hat, logits, instance_embeddings = model(image)
             z1 = model.forward_clean(image)[0]
             reconstruction_loss = L2(z_hat1, Variable(z1.data, requires_grad=False)) + L2(x_hat, image)
             loss = 20 * reconstruction_loss
-
+#92
+             
             if labelled:
                 logits_per_pixel = logits.view(image.shape[0], label_classes, -1).transpose(1, 2).contiguous()
                 semantic_loss = cross_entropy(logits_per_pixel.view(-1, label_classes), labels.view(-1))
+#96
                 instance_loss = sum(sum(instance_clustering(embeddings, target_clusters)
                                         for embeddings, target_clusters
                                         in SemanticLabels(image_instance_embeddings, image_labels, image_instances))
