@@ -230,7 +230,7 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
             logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
             #break
 
-def evaluateepocshcuda(model, instance_clustering, test_loader, epochs):
+def evaluateepochscuda(model, instance_clustering, test_loader, epochs):
     #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)

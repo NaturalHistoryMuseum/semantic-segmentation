@@ -63,4 +63,4 @@ print(test_loader)
 # extracted epochs as parameter
 #**************************************************
 epochs = 40
-evaluateepochcuda(model, instance_clustering, test_loader, epochs)
+evaluateepochscuda(model, instance_clustering, test_loader, epochs)
