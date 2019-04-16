@@ -200,12 +200,12 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
                 labelled = isinstance(testing_data, tuple) or isinstance(testing_data, list)
                 if labelled:
                     image, labels, instances = testing_data
-                    image, labels, instances = Variable(image.unsqueeze(0)), Variable(labels.unsqueeze(0)), Variable(instances)
+                    image, labels, instances = Variable(image).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
                 else:
                     image = testing_data
-                    image = Variable(image)
+                    image = Variable(image).cuda()
                 with torch.no_grad():
-                    #image, labels, instances = (Variable(tensor) for tensor in (image, labels, instances))
+                    image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
                     z_hat1, x_hat, logits, instance_embeddings = model(image)
 
                     z1 = model.forward_clean(image)[0]
