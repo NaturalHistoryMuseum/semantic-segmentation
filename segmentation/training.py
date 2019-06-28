@@ -55,6 +55,7 @@ def torch_zip(*args):
 
 #**************************************************
 # extracted label_classes as parameter
+# 
 #**************************************************
 def train(model, instance_clustering, train_loader, test_loader, epochs, label_classes=5):
     cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights.cuda())
@@ -118,7 +119,6 @@ def train(model, instance_clustering, train_loader, test_loader, epochs, label_c
             # losses['train']['semantic'].append(semantic_loss.item())
             # losses['train']['instance'].append(instance_loss.item())
             losses['train']['total'].append(loss.item())
-            # accuracies['train'].append(accuracy)
             info = f'Epoch: {epoch + 1:{3}}, Batch: {i:{3}}, Loss: {loss.item()}'
             if labelled:
                 info += f', Accuracy: {(accuracy * 100)}%'
@@ -170,7 +170,72 @@ def train(model, instance_clustering, train_loader, test_loader, epochs, label_c
             np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
 
         if (epoch + 1) % 2 == 0:
+            epoch_name = f'epoch_{epoch + 1}'
             torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
+            average_accuracy = testepoch(model, instance_clustering, test_loader, epoch_name)
+            accuracies['test'].append(average_accuracy)
+            accuracies['train'].append(accuracy)
+        
+def testepoch(model, instance_clustering, test_loader, epoch_name):
+
+    L2 = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = lr_scheduler.StepLR(optimizer, 10, gamma=0.1)
+
+    losses = {'train': {'semantic': [], 'instance': [], 'total': []},
+              'test':  {'semantic': [], 'instance': [], 'total': []}}
+    accuracies = {'train': [], 'test': []}
+
+    epoch_file = 'models/'+ epoch_name
+    #model.load_state_dict(torch.load(epoch_file))
+    model.eval()
+            
+    image = labels = instances = None
+         
+    total_loss = 0
+    total_accuracy = 0
+            
+    num_test_batches = 1
+    
+    #for i, testing_data in enumerate(test_loader):
+    for i, testing_data in enumerate(test_loader.labelled.dataset):
+        image, labels, instances = testing_data
+    #for image, labels, instances in islice(test_loader, num_test_batches):
+        #image, labels, instances = (Variable(tensor.unsqueeze(0)).cuda() for tensor in (image, labels, instances))
+        image, labels, instances = Variable(image.unsqueeze(0)).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
+        #labelled = isinstance(testing_data, tuple) or isinstance(testing_data, list)
+        #if labelled:
+
+        num_test_batches = i+1
+        # image, labels, instances = testing_data
+        # image, labels, instances = Variable(image).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
+
+        with torch.no_grad():
+            #image, labels, instances = (Variable(tensor) for tensor in (image, labels, instances))
+            z_hat1, x_hat, logits, instance_embeddings = model(image)
+            z1 = model.forward_clean(image)[0]
+
+            loss = L2(z_hat1, z1) + L2(x_hat, image)
+
+            total_loss += loss.item()
+
+            predicted_class = logits.data.max(1, keepdim=True)[1]
+            correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
+            #print("test", i, "batches", num_test_batches,"predicted class:", np.prod(predicted_class.shape),"correct prediction:", correct_prediction.int().sum().item())
+            accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+            #print ("accuracy", accuracy)
+            total_accuracy += accuracy
+        if i ==  len(test_loader.labelled.dataset) - 1:
+            break
+
+    #print ("test batches", num_test_batches)
+    #print ("total accuracy", total_accuracy)
+    average_loss = total_loss / num_test_batches
+    average_accuracy = total_accuracy / num_test_batches
+    losses['test']['total'].append(average_loss)
+    logging.info(f'Epoch: {epoch_name}, Batches: {num_test_batches}, Loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
+    return average_accuracy
+    #break
 
 def evaluateepochs(model, instance_clustering, test_loader, epochs):
     #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)

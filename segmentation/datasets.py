@@ -441,7 +441,9 @@ class ImageFolder(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
+        print(index)
         path = self.samples[index]
+        print(path)
         img = Image.open(path)
 
         return self.transform(img)
