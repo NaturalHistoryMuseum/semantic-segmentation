@@ -1,11 +1,13 @@
 analysis/*
 models/*
+modelsbk/*
 results/*
 training.log
 **/*.pyc
 **/*.npy
 data
 data01
+databk
 **/*.png
 **/*.JPG
 **/*.zip
