@@ -21,7 +21,7 @@ from segmentation.training import train
 # extracted label classes as parameters
 #**************************************************
 #read initial values from segmentation.ini
-source_dir = 'herbarium/nmwhs'
+source_dir = 'herbarium/nmwhs_01'
 ini_file = Path().absolute().parent / source_dir / "segmentation.ini"
 unlabelled_dir = Path().absolute().parent / source_dir / "unlabelled"
 if ini_file.exists():
