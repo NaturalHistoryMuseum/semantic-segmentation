@@ -116,22 +116,21 @@ def train(model, instance_clustering, train_loader, test_loader, epochs, label_c
             if labelled:
                 info += f', Accuracy: {(accuracy * 100)}%'
             logging.info(info)
+        epoch_name = f'epoch_{epoch + 1}'
+        visualise_results(Path('results') / f'{epoch_name}.png', image, x_hat, predicted_class,
+                          colours=train_loader.labelled.dataset.colours)
+        np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
+        np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
 
-        if (epoch + 1) % 1 == 0:
-            visualise_results(Path('results') / f'epoch_{epoch + 1}.png', image, x_hat, predicted_class,
-                              colours=train_loader.labelled.dataset.colours)
-            np.save('losses.npy', [{'train': losses['train'], 'test': losses['test']}])
-            np.save('accuracies.npy', [{'train': accuracies['train'], 'test': accuracies['test']}])
-
-        if (epoch + 1) % 2 == 0:
-            epoch_name = f'epoch_{epoch + 1}'
-            torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
-            average_accuracy = testepoch(model, instance_clustering, test_loader, epoch_name)
-            accuracies['test'].append(average_accuracy)
-            accuracies['train'].append(accuracy)
+        epoch_name = f'epoch_{epoch + 1}'
+        torch.save(model.state_dict(), Path('models') / f'epoch_{epoch + 1}')
+        average_accuracy = testepoch(model, instance_clustering, test_loader, epoch_name)
+        accuracies['test'].append(average_accuracy)
+        accuracies['train'].append(accuracy)
         
 #**************************************************
 # Test segmentation on current epoch using test set
+# use 10% of the labelled test set
 #**************************************************
 def testepoch(model, instance_clustering, test_loader, epoch_name):
 
@@ -171,7 +170,8 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
             accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
             total_accuracy += accuracy
 
-            if i ==  len(test_loader.labelled.dataset)-1:
+            # try testing only 10% of the test set
+            if i ==  (len(test_loader.labelled.dataset/10)-1):
                 break
 
     average_loss = total_loss / num_test_batches
@@ -181,6 +181,10 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
     
     return average_accuracy
 
+#***************************************************
+# Evaluate segmentation on all epochs using test set
+# use 100% of the labelled test set
+#***************************************************
 def evaluateepochs(model, instance_clustering, test_loader, epochs):
     #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
