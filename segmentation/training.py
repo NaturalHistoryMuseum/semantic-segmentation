@@ -171,7 +171,7 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
             total_accuracy += accuracy
 
             # try testing only 10% of the test set
-            if i ==  (len(test_loader.labelled.dataset/10)-1):
+            if i ==  (len(test_loader.labelled.dataset)/10)-1:
                 break
 
     average_loss = total_loss / num_test_batches
