@@ -141,7 +141,6 @@ class Slides(SemanticSegmentationDataset):
         #read initial values from segmentation.ini            
         ini_file = Path().absolute().parent / self.images_dir / "segmentation.ini"
         if ini_file.exists():
-            print("reading values from ini file")
             seg_config = configparser.ConfigParser()
             seg_config.read(ini_file)
             # sizes of training and testing datasets
@@ -163,7 +162,6 @@ class Slides(SemanticSegmentationDataset):
         with h5py.File(self.datafile, 'r') as f:
             counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
             self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
-        print(self.weights)
 
     def process_label_image_files(self, folder_path, colours, f_train, f_test):
         train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
@@ -441,9 +439,7 @@ class ImageFolder(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        print(index)
         path = self.samples[index]
-        print(path)
         img = Image.open(path)
 
         return self.transform(img)
