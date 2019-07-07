@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision import transforms
 
-from segmentation.datasets import HerbariumSheets, ImageFolder, SemiSupervisedDataLoader
+from segmentation.datasets import SpecimenImages, ImageFolder, SemiSupervisedDataLoader
 from segmentation.instances import DiscriminativeLoss, mean_shift, visualise_embeddings, visualise_instances
 from segmentation.network import SemanticInstanceSegmentation
 from segmentation.training import train
@@ -82,13 +82,13 @@ target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x
 # Slides: copies the data if required into the data/raw/images,
 # Slides, labels] directories and returns
 # import pdb; pdb.set_trace()
-train_data_labelled = HerbariumSheets(download=True, train=True, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
+train_data_labelled = SpecimenImages(download=True, train=True, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 train_loader_labelled = torch.utils.data.DataLoader(train_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_data_unlabelled = ImageFolder(root='data/unlabelled', transform=transform)
 train_loader_unlabelled = torch.utils.data.DataLoader(train_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 train_loader = SemiSupervisedDataLoader(train_loader_labelled, train_loader_unlabelled)
 
-test_data_labelled = HerbariumSheets(download=True, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
+test_data_labelled = SpecimenImages(download=True, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 test_loader_labelled = torch.utils.data.DataLoader(test_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_data_unlabelled = ImageFolder(root='data/unlabelled', transform=transform)
 test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)

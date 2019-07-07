@@ -157,7 +157,7 @@ class SpecimenImages(SemanticSegmentationDataset):
             self.height = 1764
             self.width = 1169
                 
-        super(HerbariumSheets, self).__init__(*args, **kwargs)
+        super(SpecimenImages, self).__init__(*args, **kwargs)
         # read color classes from the file and asign them to:
         # self.class_to_idx as labels
         # self.colours as color codes
