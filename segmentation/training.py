@@ -195,7 +195,7 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
 
     for epoch in range(epochs):
         #loads the epochs saved during training
-        epoch_name = 'models/epoch_'+str(epoch + 1)
+        epoch_name = 'epoch_'+str(epoch + 1)
         epoch_file = 'models/'+ epoch_name
         model.load_state_dict(torch.load(epoch_file))
         model.eval()
@@ -225,6 +225,8 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
                 correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
                 accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
                 total_accuracy += accuracy
+                if i ==  len(test_loader.labelled.dataset)-1:
+                  break
 
         average_loss = total_loss / num_test_batches
         average_accuracy = total_accuracy / num_test_batches
