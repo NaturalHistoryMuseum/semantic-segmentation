@@ -142,8 +142,6 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
               'test':  {'semantic': [], 'instance': [], 'total': []}}
     accuracies = {'train': [], 'test': []}
     
-    epoch_file = 'models/'+ epoch_name
-
     model.eval()
             
     image = labels = instances = None
@@ -196,49 +194,40 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
     accuracies = {'train': [], 'test': []}
 
     for epoch in range(epochs):
-        if (epoch + 1) % 2 == 0:
-            epoch_file = 'models/epoch_'+str(epoch + 1)
-            model.load_state_dict(torch.load(epoch_file))
-            model.eval()
+        #loads the epochs saved during training
+        epoch_name = 'models/epoch_'+str(epoch + 1)
+        epoch_file = 'models/'+ epoch_name
+        model.load_state_dict(torch.load(epoch_file))
+        model.eval()
             
-            image = labels = instances = None
+        image = labels = instances = None
             
-            total_loss = 0
-            total_accuracy = 0
+        total_loss = 0
+        total_accuracy = 0
             
-            num_test_batches = 1
-            for i in range(len(test_loader.labelled.dataset)):
+        num_test_batches = 1
+
+        with torch.no_grad():
+            for i, testing_data in enumerate(test_loader.labelled.dataset):
+                image, labels, instances = testing_data
+                image, labels, instances = Variable(image.unsqueeze(0)).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
+
                 num_test_batches = i+1
-                testing_data=test_loader.labelled.dataset[i]
-                labelled = isinstance(testing_data, tuple) or isinstance(testing_data, list)
-                if labelled:
-                    image, labels, instances = testing_data
-                    image, labels, instances = Variable(image).cuda(), Variable(labels).cuda(), Variable(instances).cuda()
-                else:
-                    image = testing_data
-                    image = Variable(image).cuda()
-                with torch.no_grad():
-                    image, labels, instances = (Variable(tensor).cuda() for tensor in (image, labels, instances))
-                    z_hat1, x_hat, logits, instance_embeddings = model(image)
 
-                    z1 = model.forward_clean(image)[0]
+                z_hat1, x_hat, logits, instance_embeddings = model(image)
+                z1 = model.forward_clean(image)[0]
 
-                    loss = L2(z_hat1, z1) + L2(x_hat, image)
+                loss = L2(z_hat1, z1) + L2(x_hat, image)
 
-                    total_loss += loss.item()
+                total_loss += loss.item()
 
-                    predicted_class = logits.data.max(1, keepdim=True)[1]
-                    correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
-                    #print("test", i, "batches", num_test_batches,"predicted class:", np.prod(predicted_class.shape),"correct prediction:", correct_prediction.int().sum().item())
-                    accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
-                    #print ("accuracy", accuracy)
-                    total_accuracy += accuracy
+                predicted_class = logits.data.max(1, keepdim=True)[1]
+                correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
+                accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
+                total_accuracy += accuracy
 
-            #print ("test batches", num_test_batches)
-            #print ("total accuracy", total_accuracy)
-            average_loss = total_loss / num_test_batches
-            average_accuracy = total_accuracy / num_test_batches
-            losses['test']['total'].append(average_loss)
-            accuracies['test'].append(average_accuracy)
-            logging.info(f'Epoch: {epoch + 1:{3}}, Test Set, Cross-entropy loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
-            #break
+        average_loss = total_loss / num_test_batches
+        average_accuracy = total_accuracy / num_test_batches
+        losses['test']['total'].append(average_loss)
+        logging.info(f'Epoch: {epoch_name}, Batches: {num_test_batches}, Loss: {average_loss}, Accuracy: {(average_accuracy * 100)}%')
+
