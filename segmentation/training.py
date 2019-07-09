@@ -183,7 +183,7 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
 # Evaluate segmentation on all epochs using test set
 # use 100% of the labelled test set
 #***************************************************
-def evaluateepochs(model, instance_clustering, test_loader, epochs):
+def evaluateepochs(model, instance_clustering, test_loader, epochs, epochs_dir):
     #cross_entropy = nn.CrossEntropyLoss(weight=train_loader.labelled.dataset.weights)
     L2 = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -196,7 +196,7 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs):
     for epoch in range(epochs):
         #loads the epochs saved during training
         epoch_name = 'epoch_'+str(epoch + 1)
-        epoch_file = 'models/'+ epoch_name
+        epoch_file = epochs_dir + epoch_name
         model.load_state_dict(torch.load(epoch_file))
         model.eval()
             

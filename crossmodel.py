@@ -76,5 +76,5 @@ test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch
 test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabelled)
 
 #[5] Train model
-epochs_dir = 'models/'
+epochs_dir = '../model01/models/'
 evaluateepochs(model, instance_clustering, test_loader, epochs, epochs_dir)
