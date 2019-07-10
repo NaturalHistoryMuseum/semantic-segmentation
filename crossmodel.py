@@ -68,13 +68,20 @@ transform = transforms.Compose([ #torchvision
 target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x * 255).long())])
 
 # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
+# Crossvalidation 01: use the current dir data and model and only load external model dictionaries, ran on 20190709
+# test_data_labelled = SpecimenImages(download=False, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 
-test_data_labelled = SpecimenImages(download=False, train=False, root='data', transform=transform, target_transform=target_transform,images_dir = source_dir)
+# Crossvalidation 02: use the current dir model and model dictionaries, just switch the origin for the data, ran on 20190709
+test_data_labelled = SpecimenImages(download=False, train=False, root='../model01/data', transform=transform, target_transform=target_transform,images_dir = source_dir)
 test_loader_labelled = torch.utils.data.DataLoader(test_data_labelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_data_unlabelled = ImageFolder(root='data/unlabelled', transform=transform)
 test_loader_unlabelled = torch.utils.data.DataLoader(test_data_unlabelled, batch_size=batch_size, drop_last=True, shuffle=True)
 test_loader = SemiSupervisedDataLoader(test_loader_labelled, test_loader_unlabelled)
 
 #[5] Train model
-epochs_dir = '../model01/models/'
+# Crossvalidation 01: use the current dir data and model and only load external model dictionaries, ran on 20190709
+# epochs_dir = '../model01/models/' 
+
+# Crossvalidation 02: use the current dir model and model dictionaries, just switch the origin for the data, ran on 20190710
+epochs_dir = 'models/'
 evaluateepochs(model, instance_clustering, test_loader, epochs, epochs_dir)
