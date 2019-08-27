@@ -168,8 +168,8 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
             accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
             total_accuracy += accuracy
 
-            # try testing only 10% of the test set
-            if i ==  (len(test_loader.labelled.dataset)/50)-1:
+            # test 50% of the test set
+            if i ==  (len(test_loader.labelled.dataset)/2)-1:
                 break
 
     average_loss = total_loss / num_test_batches
@@ -225,8 +225,8 @@ def evaluateepochs(model, instance_clustering, test_loader, epochs, epochs_dir):
                 correct_prediction = predicted_class.eq(labels.data.view_as(predicted_class))
                 accuracy = correct_prediction.int().sum().item() / np.prod(predicted_class.shape)
                 total_accuracy += accuracy
-                if i ==  len(test_loader.labelled.dataset)-1:
-                  break
+                #if i ==  len(test_loader.labelled.dataset)-1:
+                #  break
 
         average_loss = total_loss / num_test_batches
         average_accuracy = total_accuracy / num_test_batches
