@@ -21,7 +21,7 @@ from segmentation.training import train
 # extracted label classes as parameters
 #**************************************************
 #read initial values from segmentation.ini
-source_dir = 'herbarium/nmwhs_01'
+source_dir = 'slides/rbgkslides'
 ini_file = Path().absolute().parent / source_dir / "segmentation.ini"
 unlabelled_dir = Path().absolute().parent / source_dir / "unlabelled"
 if ini_file.exists():
@@ -76,7 +76,6 @@ transform = transforms.Compose([ #torchvision
     transforms.ToTensor()])
 
 target_transform = transforms.Compose([transform, transforms.Lambda(lambda x: (x * 255).long())])
-
 
 # WARNING: Don't use multiple workers for loading! Doesn't work with setting random seed
 # Slides: copies the data if required into the data/raw/images,
