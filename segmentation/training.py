@@ -130,7 +130,7 @@ def train(model, instance_clustering, train_loader, test_loader, epochs, label_c
         
 #**************************************************
 # Test segmentation on current epoch using test set
-# use 10% of the labelled test set
+# use 50% of the labelled test set
 #**************************************************
 def testepoch(model, instance_clustering, test_loader, epoch_name):
 
@@ -169,7 +169,7 @@ def testepoch(model, instance_clustering, test_loader, epoch_name):
             total_accuracy += accuracy
 
             # try testing only 10% of the test set
-            if i ==  (len(test_loader.labelled.dataset)/10)-1:
+            if i ==  (len(test_loader.labelled.dataset)/50)-1:
                 break
 
     average_loss = total_loss / num_test_batches
