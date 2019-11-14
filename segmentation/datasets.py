@@ -1,5 +1,7 @@
 from itertools import chain, cycle
 from pathlib import Path
+import configparser
+
 import random
 import shutil
 import tempfile
@@ -12,13 +14,18 @@ from PIL import Image
 import torch
 from torch.utils import data
 
-
 def identity(x):
     """To be used in place of explicitly checking whether there are transforms to be applied"""
     return x
 
 
 class SemanticSegmentationDataset(data.Dataset):
+    """
+    raw_folder: the folder where the images are stored
+    processed_folder: the folder where hdf5 files are stored
+    training_file: the hdf5 file where training image data is stored
+    test_file: the hdf5 file where test image data is stored
+    """
     @property
     def raw_folder(self): return self.root / 'raw'
 
@@ -34,7 +41,8 @@ class SemanticSegmentationDataset(data.Dataset):
     @property
     def idx_to_class(self): return sorted(self.class_to_idx, key=self.class_to_idx.get)
 
-    def __init__(self, root, train=True, transform=identity, target_transform=identity, download=False):
+    def __init__(self, root, images_dir, train=True, transform=identity, target_transform=identity, download=False):
+        
         self.root = Path(root).expanduser()
         self.transform = transform
         self.target_transform = target_transform
@@ -59,7 +67,6 @@ class SemanticSegmentationDataset(data.Dataset):
         with h5py.File(self.datafile, 'r') as f:
             img = f['images'][index]
             target = f['labels'][index]
-
         # doing this so that it is consistent with all other datasets to return a PIL Image
         img = Image.fromarray((img * 255).astype(np.uint8), mode='RGB')
         target = Image.fromarray(target.astype(np.uint8), mode='L')
@@ -75,16 +82,24 @@ class SemanticSegmentationDataset(data.Dataset):
     def __len__(self):
         return self.train_size if self.train else self.test_size
 
-    def process_raw_image_files(self, folder_path, f_train, f_test, extension='*.png'):
+    def process_raw_image_files(self, folder_path, f_train, f_test, extension='*.JPG'):
         train_set = f_train.create_dataset('images', (self.train_size, self.height, self.width, 3), dtype=np.float32)
         test_set = f_test.create_dataset('images', (self.test_size, self.height, self.width, 3), dtype=np.float32)
         images = (Image.open(filename) for filename in sorted(folder_path.glob(extension)))
+        j=k=l=0
+        # split 80/20
         for i, image in enumerate(images):
-            if i < self.train_size:
-                train_set[i] = np.asarray(image) / 255
-                test_set[i] = np.asarray(image) / 255  # hack!!
+            if j>7:
+                #add it to the test set
+                test_set[k] = np.asarray(image) / 255
+                k+=1
             else:
-                test_set[i - self.train_size] = np.asarray(image) / 255
+                #add it to the train set
+                train_set[l] = np.asarray(image) / 255
+                l+=1
+            j+=1
+            if j>9:
+                j=0
 
     def read_label_file(self, path):
         with open(path, 'r') as f:
@@ -112,101 +127,45 @@ class SemanticSegmentationDataset(data.Dataset):
             fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
 
-
-class CamVid(SemanticSegmentationDataset):
-    """`CamVid <http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/>`_ Dataset.
-    Args:
-        root (string): Root directory of dataset where ``processed/training.pt``
-            and  ``processed/test.pt`` exist.
-        train (bool, optional): If True, creates dataset from ``training.pt``,
-            otherwise from ``test.pt``.
-        download (bool, optional): If true, downloads the dataset from the internet and
-            puts it in root directory. If dataset is already downloaded, it is not
-            downloaded again.
-        transform (callable, optional): A function/transform that  takes in an PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes in the
-            target and transforms it.
-    """
-    urls = {'raw': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/files/701_StillsRaw_full.zip',
-            'labels': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/LabeledApproved_full.zip',
-            'classes': 'http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/label_colors.txt'}
-
+class SpecimenImages(SemanticSegmentationDataset):
     def __init__(self, *args, **kwargs):
-        super(CamVid, self).__init__(*args, **kwargs)
-        self.train_size = 525
-        self.test_size = 176
-        self.height = 720
-        self.width = 960
-
-    def process_label_image_files(self, folder_path, colours, f_train, f_test):
-        train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
-        test_set = f_test.create_dataset('labels', (self.test_size, self.height, self.width), dtype=np.int64)
-        images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
-
-        values = ((np.array(colours) // 64) * np.array([1, 4, 16]).reshape(1, 3)).sum(axis=1)
-        key = np.argsort(values)
-        values.sort()
-
-        for i, image in enumerate(images):
-            image_colours = ((np.asarray(image) // 64) * np.array([1, 4, 16]).reshape(1, 1, 3)).sum(axis=2)
-            index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
-
-            if i < self.train_size:
-                train_set[i] = key[index]
-            else:
-                test_set[i - self.train_size] = key[index]
-
-    def download(self):
-        """Download the CamVid data if it doesn't exist in processed_folder already."""
-        self.raw_folder.mkdir(exist_ok=True, parents=True)
-        self.processed_folder.mkdir(exist_ok=True, parents=True)
-
-        print(f'Downloading {self.urls["raw"]}')
-
-        data = urllib.request.urlopen(self.urls["raw"])
-        with tempfile.NamedTemporaryFile('w') as tmp:
-            tmp.write(data.read())
-            with zipfile.ZipFile(tmp.name) as zip_f:
-                zip_f.extractall(self.raw_folder)
-
-        print(f'Downloading {self.urls["labels"]}')
-
-        data = urllib.request.urlopen(self.urls["labels"])
-        with tempfile.NamedTemporaryFile('wb') as tmp:
-            tmp.write(data.read())
-            with zipfile.ZipFile(tmp.name) as zip_f:
-                zip_f.extractall(self.raw_folder / 'LabeledApproved_full')
-
-        print(f'Downloading {self.urls["classes"]}')
-
-        data = urllib.request.urlopen(self.urls["classes"])
-        with open(self.processed_folder / 'label_colors.txt', 'wb') as class_list:
-            class_list.write(data.read())
-
-        # process and save as torch files
-        print('Processing...')
-
-        self.class_to_idx, colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
-
-        with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:
-            self.process_raw_image_files(self.raw_folder / '701_StillsRaw_full', f_train, f_test)
-            self.process_label_image_files(self.raw_folder / 'LabeledApproved_full', colours, f_train, f_test)
-
-        print('Done!')
-
-
-class Slides(SemanticSegmentationDataset):
-    def __init__(self, *args, **kwargs):
-        self.train_size = 30
-        self.test_size = 30
-        self.height = 300
-        self.width = 800
-        super(Slides, self).__init__(*args, **kwargs)
+        if "images_dir" in  kwargs.keys():
+            self.images_dir = kwargs["images_dir"]
+        else:
+            self.images_dir = "TrainingHerbariumSheets"
+        #**************************************************
+        # convert to parameter train and test size
+        # convert to parameter height and width
+        #**************************************************
+        #read initial values from segmentation.ini            
+        ini_file = Path().absolute().parent / self.images_dir / "segmentation.ini"
+        if ini_file.exists():
+            print("reading values from ini file")
+            seg_config = configparser.ConfigParser()
+            seg_config.read(ini_file)
+            # sizes of training and testing datasets
+            self.train_size = int(seg_config['DEFAULT']["trainsize"])
+            self.test_size  = int(seg_config['DEFAULT']["testsize"])
+            # image dimensions
+            self.height = int(seg_config['DEFAULT']["imgheight"])
+            self.width = int(seg_config['DEFAULT']["imgwidth"])
+        else:
+            # sizes of training and testing datasets
+            self.train_size = 200 
+            self.test_size  = 50
+            # sizes of training and testing datasets
+            self.height = 1764
+            self.width = 1169
+                
+        super(SpecimenImages, self).__init__(*args, **kwargs)
+        # read color classes from the file and asign them to:
+        # self.class_to_idx as labels
+        # self.colours as color codes
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
         with h5py.File(self.datafile, 'r') as f:
             counts = np.bincount(f['labels'][()].flatten(), minlength=len(self.class_to_idx))
             self.weights = torch.Tensor((1 / counts) / (1 / counts).sum())
+            
 
     def process_label_image_files(self, folder_path, colours, f_train, f_test):
         train_set = f_train.create_dataset('labels', (self.train_size, self.height, self.width), dtype=np.int64)
@@ -216,40 +175,52 @@ class Slides(SemanticSegmentationDataset):
         values = ((np.array(colours) // 255) * np.array([1, 2, 4]).reshape(1, 3)).sum(axis=1)
         key = np.argsort(values)
         values.sort()
-
+        j=k=l=0
         for i, image in enumerate(images):
             image = 1 * (np.asarray(image) > 128)
             image_colours = (image * np.array([1, 2, 4]).reshape(1, 1, 3)).sum(axis=2)
             index = np.digitize(image_colours.ravel(), values, right=True).reshape(self.height, self.width)
-
-            if i < self.train_size:
-                train_set[i] = key[index]
-                test_set[i] = key[index]  # hack!!
+        # split get 2 of every ten into the test set
+            if j>7:
+                #add image to the test set
+                test_set[k] = key[index]
+                k+=1
             else:
-                test_set[i - self.train_size] = key[index]
+                #add image to the train set
+                train_set[l] = key[index]
+                l+=1
+            j+=1
+            if j>9:
+                j=0
 
     def process_instance_image_files(self, folder_path, f_train, f_test):
         train_set = f_train.create_dataset('instances', (self.train_size, self.height, self.width), dtype=np.int64)
         test_set = f_test.create_dataset('instances', (self.test_size, self.height, self.width), dtype=np.int64)
         images = (Image.open(filename) for filename in sorted(folder_path.glob('*.png')))
-
+        j=k=l=0
         for i, image in enumerate(images):
             image = np.asarray(image)
             image_colors = image.reshape(-1, 3)
             colors, indices = np.unique(image_colors, axis=0, return_inverse=True)
-
-            if i < self.train_size:
-                train_set[i] = indices.reshape(image.shape[:2])
-                test_set[i] = indices.reshape(image.shape[:2])  # hackl!!
+        # split get 2 of every ten into the test set
+            if j>7:
+                #add image to the test set
+                test_set[k] = indices.reshape(image.shape[:2])
+                k+=1
             else:
-                test_set[i - self.train_size] = indices.reshape(image.shape[:2])
+                #add image to the train set
+                train_set[l] = indices.reshape(image.shape[:2])
+                l+=1
+            j+=1
+            if j>9:
+                j=0
 
     def __getitem__(self, index):
         """
         Args:
             index (int): Index
         Returns:
-            tuple: (image, target) where target is index of the target class.
+            tuple: (image, labels, instances)
         """
         with h5py.File(self.datafile, 'r') as f:
             img = f['images'][index]
@@ -272,10 +243,14 @@ class Slides(SemanticSegmentationDataset):
         return img, labels, instances
 
     def download(self):
+        #**************************************************
+        # convert to parameter directory structure
+        #**************************************************
+
         self.raw_folder.mkdir(exist_ok=True, parents=True)
         self.processed_folder.mkdir(exist_ok=True, parents=True)
 
-        folder = Path().absolute().parent / 'TrainingSlidesInstances'
+        folder = Path().absolute().parent / self.images_dir
 
         print(f'Copying images')
 
@@ -286,31 +261,34 @@ class Slides(SemanticSegmentationDataset):
         print(f'Copying labels')
 
         (self.raw_folder / 'labels').mkdir(exist_ok=True)
-        for filename in sorted(folder.glob('*.png')):
+        for filename in sorted(folder.glob('*_labels.png')):
             if 'label' in str(filename):
                 shutil.copy(filename, self.raw_folder / 'labels' / filename.name)
 
-        print(f'Copying labels')
+        print(f'Copying instances')
 
         (self.raw_folder / 'instances').mkdir(exist_ok=True)
-        for filename in sorted(folder.glob('*.png')):
+        for filename in sorted(folder.glob('*_instances.png')):
             if 'instance' in str(filename):
                 shutil.copy(filename, self.raw_folder / 'instances' / filename.name)
 
         print(f'Copying class file')
+        
+        #******************************************************
+        # convert to parameter location and name of label file
+        #******************************************************
 
         shutil.copy(folder / 'label_colours.txt', self.processed_folder / 'label_colors.txt')
 
         # process and save as torch files
         print('Processing...')
-
+        
         self.class_to_idx, self.colours = self.read_label_file(self.processed_folder / 'label_colors.txt')
 
         with h5py.File(self.training_file, 'w') as f_train, h5py.File(self.test_file, 'w') as f_test:
             self.process_raw_image_files(self.raw_folder / 'images', f_train, f_test, extension='*.JPG')
             self.process_label_image_files(self.raw_folder / 'labels', self.colours, f_train, f_test)
             self.process_instance_image_files(self.raw_folder / 'instances', f_train, f_test)
-
         print('Done!')
 
 
@@ -331,9 +309,9 @@ class ImageFolder(data.Dataset):
 
 
 class SemiSupervisedDataLoader:
-    def __init__(self, loader_labelled, loader_unlablled):
+    def __init__(self, loader_labelled, loader_unlabelled):
         self.labelled = loader_labelled
-        self.unlabelled = loader_unlablled
+        self.unlabelled = loader_unlabelled
 
     def __iter__(self):
         return chain(*zip(self.unlabelled, cycle(self.labelled)))
